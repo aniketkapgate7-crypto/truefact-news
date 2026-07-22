@@ -1,3 +1,8 @@
+from app.schemas.credibility import (
+    CredibilityAssessment,
+    CredibilityAssessmentCreate,
+    CredibilityAssessmentUpdate,
+)
 from app.schemas.news import (
     NewsArticle,
     NewsArticleCreate,
@@ -24,4 +29,7 @@ __all__ = [
     "SocialPostCreate",
     "SocialPostListResponse",
     "SocialPostUpdate",
+    "CredibilityAssessment",
+    "CredibilityAssessmentCreate",
+    "CredibilityAssessmentUpdate",
 ]

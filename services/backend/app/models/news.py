@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 
 if TYPE_CHECKING:
+    from app.models.credibility import CredibilityAssessmentModel
     from app.models.social_post import SocialPostModel
 
 
@@ -112,4 +113,10 @@ class NewsArticleModel(Base):
         back_populates="news_article",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    credibility_assessment: Mapped[CredibilityAssessmentModel | None] = relationship(
+        back_populates="news_article",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
     )
