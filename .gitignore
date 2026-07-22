@@ -145,3 +145,4 @@ venv/
 *.db
 *.sqlite
 *.sqlite3
+.ruff_cache/

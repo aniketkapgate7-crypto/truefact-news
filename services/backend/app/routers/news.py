@@ -16,7 +16,6 @@ from app.schemas.news import (
     PaginationMetadata,
 )
 
-
 router = APIRouter(
     prefix="/api/v1/news",
     tags=["News"],
@@ -91,9 +90,7 @@ def get_news(
         )
 
     if region:
-        filters.append(
-            func.lower(NewsArticleModel.region) == region.strip().lower()
-        )
+        filters.append(func.lower(NewsArticleModel.region) == region.strip().lower())
 
     if category:
         filters.append(
@@ -101,15 +98,9 @@ def get_news(
         )
 
     if source:
-        filters.append(
-            NewsArticleModel.source_name.ilike(f"%{source.strip()}%")
-        )
+        filters.append(NewsArticleModel.source_name.ilike(f"%{source.strip()}%"))
 
-    count_statement = (
-        select(func.count())
-        .select_from(NewsArticleModel)
-        .where(*filters)
-    )
+    count_statement = select(func.count()).select_from(NewsArticleModel).where(*filters)
     total_items = db.scalar(count_statement) or 0
     total_pages = ceil(total_items / page_size) if total_items else 0
 
@@ -120,11 +111,7 @@ def get_news(
         "repost_count": NewsArticleModel.repost_count,
     }
     sort_column = sort_columns[sort_by]
-    ordering = (
-        sort_column.asc()
-        if sort_order == "asc"
-        else sort_column.desc()
-    )
+    ordering = sort_column.asc() if sort_order == "asc" else sort_column.desc()
 
     articles_statement = (
         select(NewsArticleModel)

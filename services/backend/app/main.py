@@ -11,7 +11,6 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.routers.news import router as news_router
 
-
 APP_NAME = "TrueFact News API"
 APP_VERSION = "0.2.0"
 
@@ -140,4 +139,3 @@ async def health_check(request: Request):
         "timestamp": now.isoformat(),
         "uptime_seconds": round(uptime, 2),
     }
-    

@@ -10,7 +10,6 @@ from app.db.database import Base, get_db
 from app.main import app
 from app.models import NewsArticleModel  # Registers the model
 
-
 test_engine = create_engine(
     "sqlite://",
     connect_args={"check_same_thread": False},

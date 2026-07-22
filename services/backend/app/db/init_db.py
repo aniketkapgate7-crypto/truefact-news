@@ -1,5 +1,4 @@
 from app.db.database import Base, engine
-from app.models import NewsArticleModel  # Registers the model
 
 
 def create_database_tables() -> None:

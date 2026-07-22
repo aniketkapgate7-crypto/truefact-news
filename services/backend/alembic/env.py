@@ -1,11 +1,9 @@
 from logging.config import fileConfig
 
 from alembic import context
-
 from app.core.config import settings
 from app.db.database import Base, engine
 from app.models import NewsArticleModel  # Registers the model
-
 
 config = context.config
 
@@ -52,4 +50,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-    

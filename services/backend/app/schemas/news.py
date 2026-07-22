@@ -29,6 +29,7 @@ class NewsArticle(NewsArticleBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class NewsArticleUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=5, max_length=250)
     summary: str | None = Field(default=None, min_length=10, max_length=1000)
@@ -39,8 +40,9 @@ class NewsArticleUpdate(BaseModel):
     published_at: datetime | None = None
     evidence_score: int | None = Field(default=None, ge=0, le=100)
     comment_count: int | None = Field(default=None, ge=0)
-    repost_count: int | None = Field(default=None, ge=0) 
-    
+    repost_count: int | None = Field(default=None, ge=0)
+
+
 class PaginationMetadata(BaseModel):
     page: int = Field(ge=1)
     page_size: int = Field(ge=1, le=100)
@@ -52,4 +54,4 @@ class PaginationMetadata(BaseModel):
 
 class NewsFeedResponse(BaseModel):
     items: list[NewsArticle]
-    pagination: PaginationMetadata  
+    pagination: PaginationMetadata

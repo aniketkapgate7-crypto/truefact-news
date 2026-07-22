@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
 
-
 sample_article = {
     "title": "TrueFact automated testing completed",
     "summary": (
@@ -113,16 +112,12 @@ def test_update_and_delete_article(client: TestClient) -> None:
     assert updated_article["comment_count"] == 20
     assert updated_article["repost_count"] == 10
 
-    delete_response = client.delete(
-        f"/api/v1/news/{article_id}"
-    )
+    delete_response = client.delete(f"/api/v1/news/{article_id}")
 
     assert delete_response.status_code == 204
     assert delete_response.content == b""
 
-    missing_response = client.get(
-        f"/api/v1/news/{article_id}"
-    )
+    missing_response = client.get(f"/api/v1/news/{article_id}")
 
     assert missing_response.status_code == 404
 
@@ -145,8 +140,7 @@ def test_search_and_filters(client: TestClient) -> None:
         "india-policy",
         "Regional policy report published",
         summary=(
-            "India Daily published a detailed regional policy "
-            "report for its readers."
+            "India Daily published a detailed regional policy report for its readers."
         ),
         source_name="India Daily",
         category="Politics",
@@ -154,15 +148,21 @@ def test_search_and_filters(client: TestClient) -> None:
         evidence_score=70,
     )
 
-    assert client.post(
-        "/api/v1/news/",
-        json=technology_article,
-    ).status_code == 201
+    assert (
+        client.post(
+            "/api/v1/news/",
+            json=technology_article,
+        ).status_code
+        == 201
+    )
 
-    assert client.post(
-        "/api/v1/news/",
-        json=politics_article,
-    ).status_code == 201
+    assert (
+        client.post(
+            "/api/v1/news/",
+            json=politics_article,
+        ).status_code
+        == 201
+    )
 
     search_response = client.get(
         "/api/v1/news/",
@@ -171,9 +171,7 @@ def test_search_and_filters(client: TestClient) -> None:
 
     assert search_response.status_code == 200
     assert search_response.json()["pagination"]["total_items"] == 1
-    assert search_response.json()["items"][0]["category"] == (
-        "Technology"
-    )
+    assert search_response.json()["items"][0]["category"] == ("Technology")
 
     filter_response = client.get(
         "/api/v1/news/",
@@ -186,9 +184,7 @@ def test_search_and_filters(client: TestClient) -> None:
 
     assert filter_response.status_code == 200
     assert filter_response.json()["pagination"]["total_items"] == 1
-    assert filter_response.json()["items"][0]["source_name"] == (
-        "India Daily"
-    )
+    assert filter_response.json()["items"][0]["source_name"] == ("India Daily")
 
     source_response = client.get(
         "/api/v1/news/",
@@ -314,10 +310,7 @@ def test_all_sorting_options(client: TestClient) -> None:
 
         assert response.status_code == 200
 
-        actual_titles = [
-            article["title"]
-            for article in response.json()["items"]
-        ]
+        actual_titles = [article["title"] for article in response.json()["items"]]
 
         assert actual_titles == expected_titles
 
@@ -351,4 +344,3 @@ def test_request_validation(client: TestClient) -> None:
     )
 
     assert empty_update_response.status_code == 400
-    
