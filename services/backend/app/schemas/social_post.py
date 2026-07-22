@@ -67,3 +67,22 @@ class SocialPost(SocialPostBase):
 class SocialPostListResponse(BaseModel):
     items: list[SocialPost]
     total_items: int = Field(ge=0)
+
+
+class PlatformEngagementSummary(BaseModel):
+    platform: SocialPlatform
+    post_count: int = Field(ge=0)
+    view_count: int = Field(ge=0)
+    like_count: int = Field(ge=0)
+    comment_count: int = Field(ge=0)
+    repost_count: int = Field(ge=0)
+
+
+class NewsEngagementSummary(BaseModel):
+    news_article_id: int
+    total_posts: int = Field(ge=0)
+    total_views: int = Field(ge=0)
+    total_likes: int = Field(ge=0)
+    total_comments: int = Field(ge=0)
+    total_reposts: int = Field(ge=0)
+    platform_breakdown: list[PlatformEngagementSummary]

@@ -306,3 +306,94 @@ def test_empty_and_null_updates_are_rejected(
     assert null_response.json()["detail"] == (
         "Required social-post fields cannot be null"
     )
+
+
+def test_engagement_summary(client: TestClient) -> None:
+    article_id = create_news_article(
+        client,
+        "engagement-summary",
+    )
+
+    payloads = [
+        make_social_post(
+            "summary-youtube-001",
+            view_count=1000,
+            like_count=150,
+            comment_count=25,
+            repost_count=10,
+        ),
+        make_social_post(
+            "summary-youtube-002",
+            view_count=2000,
+            like_count=250,
+            comment_count=35,
+            repost_count=20,
+        ),
+        make_social_post(
+            "summary-x-001",
+            platform="x",
+            post_url="https://x.com/truefact/status/123456789",
+            view_count=500,
+            like_count=80,
+            comment_count=12,
+            repost_count=7,
+        ),
+    ]
+
+    for payload in payloads:
+        response = client.post(
+            f"/api/v1/news/{article_id}/social-posts",
+            json=payload,
+        )
+        assert response.status_code == 201
+
+    response = client.get(f"/api/v1/news/{article_id}/engagement-summary")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["news_article_id"] == article_id
+    assert data["total_posts"] == 3
+    assert data["total_views"] == 3500
+    assert data["total_likes"] == 480
+    assert data["total_comments"] == 72
+    assert data["total_reposts"] == 37
+
+    breakdown = {item["platform"]: item for item in data["platform_breakdown"]}
+
+    assert breakdown["youtube"]["post_count"] == 2
+    assert breakdown["youtube"]["view_count"] == 3000
+    assert breakdown["x"]["post_count"] == 1
+    assert breakdown["x"]["view_count"] == 500
+
+
+def test_empty_engagement_summary(
+    client: TestClient,
+) -> None:
+    article_id = create_news_article(
+        client,
+        "empty-engagement-summary",
+    )
+
+    response = client.get(f"/api/v1/news/{article_id}/engagement-summary")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["total_posts"] == 0
+    assert data["total_views"] == 0
+    assert data["total_likes"] == 0
+    assert data["total_comments"] == 0
+    assert data["total_reposts"] == 0
+    assert data["platform_breakdown"] == []
+
+
+def test_engagement_summary_missing_article(
+    client: TestClient,
+) -> None:
+    response = client.get("/api/v1/news/999999/engagement-summary")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == ("News article not found")
