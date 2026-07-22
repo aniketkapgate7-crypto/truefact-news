@@ -251,3 +251,43 @@ def test_rejects_null_update(
 
     assert response.status_code == 422
     assert response.json()["detail"] == ("Updated credibility fields cannot be null")
+
+
+def test_delete_credibility_assessment(
+    client: TestClient,
+) -> None:
+    article_id = create_news_article(
+        client,
+        "delete-assessment",
+    )
+    url = f"/api/v1/news/{article_id}/credibility-assessment"
+
+    create_response = client.post(
+        url,
+        json=make_assessment(),
+    )
+    assert create_response.status_code == 201
+
+    delete_response = client.delete(url)
+
+    assert delete_response.status_code == 204
+    assert delete_response.content == b""
+
+    get_response = client.get(url)
+
+    assert get_response.status_code == 404
+    assert get_response.json()["detail"] == ("Credibility assessment not found")
+
+
+def test_delete_missing_credibility_assessment(
+    client: TestClient,
+) -> None:
+    article_id = create_news_article(
+        client,
+        "delete-missing-assessment",
+    )
+
+    response = client.delete(f"/api/v1/news/{article_id}/credibility-assessment")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == ("Credibility assessment not found")

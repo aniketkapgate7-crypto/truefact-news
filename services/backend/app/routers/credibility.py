@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -168,3 +168,21 @@ def update_credibility_assessment(
     db.refresh(assessment)
 
     return assessment
+
+
+@router.delete(
+    "/news/{article_id}/credibility-assessment",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a credibility assessment",
+)
+def delete_credibility_assessment(
+    article_id: int,
+    db: DatabaseSession,
+) -> Response:
+    _get_article_or_404(article_id, db)
+    assessment = _get_assessment_or_404(article_id, db)
+
+    db.delete(assessment)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
