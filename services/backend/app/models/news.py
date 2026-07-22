@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, DateTime, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
+
+if TYPE_CHECKING:
+    from app.models.social_post import SocialPostModel
 
 
 class NewsArticleModel(Base):
@@ -11,16 +17,16 @@ class NewsArticleModel(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "evidence_score BETWEEN 0 AND 100",
-            name="ck_news_evidence_score",
+            "evidence_score >= 0 AND evidence_score <= 100",
+            name="ck_news_articles_evidence_score",
         ),
         CheckConstraint(
             "comment_count >= 0",
-            name="ck_news_comment_count",
+            name="ck_news_articles_comment_count",
         ),
         CheckConstraint(
             "repost_count >= 0",
-            name="ck_news_repost_count",
+            name="ck_news_articles_repost_count",
         ),
     )
 
@@ -31,7 +37,7 @@ class NewsArticleModel(Base):
     )
 
     title: Mapped[str] = mapped_column(
-        String(250),
+        String(300),
         nullable=False,
         index=True,
     )
@@ -42,15 +48,15 @@ class NewsArticleModel(Base):
     )
 
     source_name: Mapped[str] = mapped_column(
-        String(150),
+        String(255),
         nullable=False,
         index=True,
     )
 
     source_url: Mapped[str] = mapped_column(
         String(2048),
-        nullable=False,
         unique=True,
+        nullable=False,
     )
 
     category: Mapped[str] = mapped_column(
@@ -73,32 +79,37 @@ class NewsArticleModel(Base):
 
     evidence_score: Mapped[int] = mapped_column(
         Integer,
-        nullable=False,
         default=0,
-        index=True,
+        nullable=False,
     )
 
     comment_count: Mapped[int] = mapped_column(
         Integer,
-        nullable=False,
         default=0,
+        nullable=False,
     )
 
     repost_count: Mapped[int] = mapped_column(
         Integer,
-        nullable=False,
         default=0,
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
         default=lambda: datetime.now(timezone.utc),
+        nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    social_posts: Mapped[list[SocialPostModel]] = relationship(
+        back_populates="news_article",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
