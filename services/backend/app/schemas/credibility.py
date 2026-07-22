@@ -1,6 +1,11 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+from app.services.credibility import (
+    CredibilityRating,
+    get_credibility_rating,
+)
 
 
 class CredibilityAssessmentBase(BaseModel):
@@ -13,10 +18,7 @@ class CredibilityAssessmentBase(BaseModel):
     evidence_quality_score: int = Field(ge=0, le=100)
     corroboration_score: int = Field(ge=0, le=100)
     content_quality_score: int = Field(ge=0, le=100)
-    explanation: str = Field(
-        min_length=10,
-        max_length=3000,
-    )
+    explanation: str = Field(min_length=10, max_length=3000)
 
 
 class CredibilityAssessmentCreate(CredibilityAssessmentBase):
@@ -57,7 +59,11 @@ class CredibilityAssessmentUpdate(BaseModel):
 
 
 class CredibilityAssessment(CredibilityAssessmentBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        extra="forbid",
+        from_attributes=True,
+        str_strip_whitespace=True,
+    )
 
     id: int
     news_article_id: int
@@ -65,3 +71,8 @@ class CredibilityAssessment(CredibilityAssessmentBase):
     method_version: str
     assessed_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def credibility_rating(self) -> CredibilityRating:
+        return get_credibility_rating(self.credibility_score)

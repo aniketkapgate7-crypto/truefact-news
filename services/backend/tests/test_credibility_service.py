@@ -1,6 +1,10 @@
 import pytest
 
-from app.services.credibility import calculate_credibility_score
+from app.services.credibility import (
+    CredibilityRating,
+    calculate_credibility_score,
+    get_credibility_rating,
+)
 
 
 def test_calculates_weighted_credibility_score() -> None:
@@ -94,3 +98,38 @@ def test_rejects_scores_outside_valid_range(
         match=("Credibility component scores must be between 0 and 100"),
     ):
         calculate_credibility_score(**scores)
+
+
+@pytest.mark.parametrize(
+    ("score", "expected_rating"),
+    [
+        (0, CredibilityRating.VERY_LOW),
+        (19, CredibilityRating.VERY_LOW),
+        (20, CredibilityRating.LOW),
+        (39, CredibilityRating.LOW),
+        (40, CredibilityRating.MEDIUM),
+        (59, CredibilityRating.MEDIUM),
+        (60, CredibilityRating.HIGH),
+        (79, CredibilityRating.HIGH),
+        (80, CredibilityRating.VERY_HIGH),
+        (100, CredibilityRating.VERY_HIGH),
+    ],
+)
+def test_returns_correct_credibility_rating(
+    score: int,
+    expected_rating: CredibilityRating,
+) -> None:
+    result = get_credibility_rating(score)
+
+    assert result is expected_rating
+
+
+@pytest.mark.parametrize("invalid_score", [-1, 101])
+def test_rejects_invalid_credibility_rating_score(
+    invalid_score: int,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="Credibility score must be between 0 and 100",
+    ):
+        get_credibility_rating(invalid_score)

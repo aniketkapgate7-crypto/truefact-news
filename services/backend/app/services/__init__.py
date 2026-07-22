@@ -1,3 +1,11 @@
-from app.services.credibility import calculate_credibility_score
+from app.services.credibility import (
+    CredibilityRating,
+    calculate_credibility_score,
+    get_credibility_rating,
+)
 
-__all__ = ["calculate_credibility_score"]
+__all__ = [
+    "CredibilityRating",
+    "calculate_credibility_score",
+    "get_credibility_rating",
+]
