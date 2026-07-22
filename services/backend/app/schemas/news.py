@@ -39,4 +39,17 @@ class NewsArticleUpdate(BaseModel):
     published_at: datetime | None = None
     evidence_score: int | None = Field(default=None, ge=0, le=100)
     comment_count: int | None = Field(default=None, ge=0)
-    repost_count: int | None = Field(default=None, ge=0)   
+    repost_count: int | None = Field(default=None, ge=0) 
+    
+class PaginationMetadata(BaseModel):
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1, le=100)
+    total_items: int = Field(ge=0)
+    total_pages: int = Field(ge=0)
+    has_next: bool
+    has_previous: bool
+
+
+class NewsFeedResponse(BaseModel):
+    items: list[NewsArticle]
+    pagination: PaginationMetadata  
