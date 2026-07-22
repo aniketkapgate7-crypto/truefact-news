@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app.routers.news import router as news_router
+from app.routers.social_posts import router as social_posts_router
 
 APP_NAME = "TrueFact News API"
 APP_VERSION = "0.2.0"
@@ -37,6 +38,10 @@ tags_metadata = [
     {
         "name": "News",
         "description": "Global news articles and evidence information.",
+    },
+    {
+        "name": "Social Posts",
+        "description": "Social media posts and engagement metrics.",
     },
 ]
 
@@ -91,6 +96,7 @@ app.add_middleware(
 
 
 app.include_router(news_router)
+app.include_router(social_posts_router)
 
 
 @app.middleware("http")
