@@ -1,18 +1,31 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
-class NewsArticle(BaseModel):
-    id: int = Field(gt=0)
+class NewsArticleBase(BaseModel):
     title: str = Field(min_length=5, max_length=250)
     summary: str = Field(min_length=10, max_length=1000)
-    source_name: str
+    source_name: str = Field(min_length=2, max_length=150)
     source_url: HttpUrl
-    category: str
-    region: str
+    category: str = Field(min_length=2, max_length=100)
+    region: str = Field(min_length=2, max_length=100)
     published_at: datetime
-    evidence_score: int = Field(ge=0, le=100)
+    evidence_score: int = Field(default=0, ge=0, le=100)
     comment_count: int = Field(default=0, ge=0)
     repost_count: int = Field(default=0, ge=0)
+
+
+class NewsArticleCreate(NewsArticleBase):
+    """Information required to create an article."""
+
+    pass
+
+
+class NewsArticle(NewsArticleBase):
+    """Article returned by the API."""
+
+    id: int = Field(gt=0)
+
+    model_config = ConfigDict(from_attributes=True)
     

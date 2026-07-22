@@ -1,8 +1,13 @@
-from datetime import datetime, timezone
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from app.schemas.news import NewsArticle
+from app.db.database import get_db
+from app.models.news import NewsArticleModel
+from app.schemas.news import NewsArticle, NewsArticleCreate
 
 
 router = APIRouter(
@@ -10,61 +15,7 @@ router = APIRouter(
     tags=["News"],
 )
 
-
-sample_news = [
-    NewsArticle(
-        id=1,
-        title="Sample global news story",
-        summary="This sample article is used to test the TrueFact News API.",
-        source_name="TrueFact Demo",
-        source_url="https://example.com/news/1",
-        category="World",
-        region="Global",
-        published_at=datetime.now(timezone.utc),
-        evidence_score=75,
-        comment_count=24,
-        repost_count=12,
-    ),
-    NewsArticle(
-        id=2,
-        title="Technology development reported across Asia",
-        summary="Multiple sources are reporting a major technology development.",
-        source_name="Asia News Demo",
-        source_url="https://example.com/news/2",
-        category="Technology",
-        region="Asia",
-        published_at=datetime.now(timezone.utc),
-        evidence_score=82,
-        comment_count=36,
-        repost_count=18,
-    ),
-    NewsArticle(
-        id=3,
-        title="European climate initiative receives new support",
-        summary="Governments and researchers have announced support for a climate initiative.",
-        source_name="Europe News Demo",
-        source_url="https://example.com/news/3",
-        category="Climate",
-        region="Europe",
-        published_at=datetime.now(timezone.utc),
-        evidence_score=88,
-        comment_count=41,
-        repost_count=29,
-    ),
-    NewsArticle(
-        id=4,
-        title="Indian space research programme announces new mission",
-        summary="An official announcement describes the goals of an upcoming space mission.",
-        source_name="India News Demo",
-        source_url="https://example.com/news/4",
-        category="Science",
-        region="India",
-        published_at=datetime.now(timezone.utc),
-        evidence_score=91,
-        comment_count=72,
-        repost_count=48,
-    ),
-]
+DatabaseSession = Annotated[Session, Depends(get_db)]
 
 
 @router.get(
@@ -73,42 +24,42 @@ sample_news = [
     summary="Get and filter news",
 )
 def get_news(
+    db: DatabaseSession,
     region: str | None = Query(default=None),
     category: str | None = Query(default=None),
     source: str | None = Query(default=None),
     min_evidence_score: int = Query(default=0, ge=0, le=100),
     limit: int = Query(default=20, ge=1, le=100),
 ):
-    articles = sample_news
+    statement = select(NewsArticleModel)
 
     if region:
-        articles = [
-            article
-            for article in articles
-            if article.region.casefold() == region.casefold()
-        ]
+        statement = statement.where(
+            func.lower(NewsArticleModel.region) == region.strip().lower()
+        )
 
     if category:
-        articles = [
-            article
-            for article in articles
-            if article.category.casefold() == category.casefold()
-        ]
+        statement = statement.where(
+            func.lower(NewsArticleModel.category) == category.strip().lower()
+        )
 
     if source:
-        articles = [
-            article
-            for article in articles
-            if source.casefold() in article.source_name.casefold()
-        ]
+        statement = statement.where(
+            NewsArticleModel.source_name.ilike(
+                f"%{source.strip()}%"
+            )
+        )
 
-    articles = [
-        article
-        for article in articles
-        if article.evidence_score >= min_evidence_score
-    ]
+    statement = (
+        statement
+        .where(
+            NewsArticleModel.evidence_score >= min_evidence_score
+        )
+        .order_by(NewsArticleModel.published_at.desc())
+        .limit(limit)
+    )
 
-    return articles[:limit]
+    return db.scalars(statement).all()
 
 
 @router.get(
@@ -116,13 +67,45 @@ def get_news(
     response_model=NewsArticle,
     summary="Get one news article",
 )
-def get_news_article(article_id: int):
-    for article in sample_news:
-        if article.id == article_id:
-            return article
+def get_news_article(
+    article_id: int,
+    db: DatabaseSession,
+):
+    article = db.get(NewsArticleModel, article_id)
 
-    raise HTTPException(
-        status_code=404,
-        detail="News article not found",
-    )
-    
+    if article is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="News article not found",
+        )
+
+    return article
+
+
+@router.post(
+    "/",
+    response_model=NewsArticle,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a news article",
+)
+def create_news_article(
+    article: NewsArticleCreate,
+    db: DatabaseSession,
+):
+    article_data = article.model_dump()
+    article_data["source_url"] = str(article.source_url)
+
+    database_article = NewsArticleModel(**article_data)
+
+    try:
+        db.add(database_article)
+        db.commit()
+        db.refresh(database_article)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An article with this source URL already exists",
+        )
+
+    return database_article
