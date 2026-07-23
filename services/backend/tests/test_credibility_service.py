@@ -6,104 +6,133 @@ from app.services.credibility import (
     calculate_credibility_score,
     generate_credibility_reason_codes,
     get_credibility_rating,
+    get_credibility_reason_message,
 )
 
 
-def test_calculates_weighted_credibility_score() -> None:
-    result = calculate_credibility_score(
-        source_reliability_score=80,
-        evidence_quality_score=90,
-        corroboration_score=70,
-        content_quality_score=60,
+def _calculate_score(
+    source_reliability_score: int,
+    evidence_quality_score: int,
+    corroboration_score: int,
+    content_quality_score: int,
+) -> int:
+    return calculate_credibility_score(
+        source_reliability_score=source_reliability_score,
+        evidence_quality_score=evidence_quality_score,
+        corroboration_score=corroboration_score,
+        content_quality_score=content_quality_score,
     )
 
-    assert result == 78
+
+def _generate_reason_codes(
+    source_reliability_score: int,
+    evidence_quality_score: int,
+    corroboration_score: int,
+    content_quality_score: int,
+) -> tuple[CredibilityReasonCode, ...]:
+    return generate_credibility_reason_codes(
+        source_reliability_score=source_reliability_score,
+        evidence_quality_score=evidence_quality_score,
+        corroboration_score=corroboration_score,
+        content_quality_score=content_quality_score,
+    )
+
+
+def test_calculate_credibility_score_uses_expected_weights() -> None:
+    score = _calculate_score(80, 90, 70, 60)
+
+    assert score == 78
 
 
 @pytest.mark.parametrize(
-    ("scores", "expected"),
+    ("component_score", "expected_score"),
     [
-        (
-            {
-                "source_reliability_score": 0,
-                "evidence_quality_score": 0,
-                "corroboration_score": 0,
-                "content_quality_score": 0,
-            },
-            0,
-        ),
-        (
-            {
-                "source_reliability_score": 100,
-                "evidence_quality_score": 100,
-                "corroboration_score": 100,
-                "content_quality_score": 100,
-            },
-            100,
-        ),
-        (
-            {
-                "source_reliability_score": 1,
-                "evidence_quality_score": 0,
-                "corroboration_score": 0,
-                "content_quality_score": 0,
-            },
-            0,
-        ),
-        (
-            {
-                "source_reliability_score": 0,
-                "evidence_quality_score": 0,
-                "corroboration_score": 2,
-                "content_quality_score": 0,
-            },
-            1,
-        ),
+        (0, 0),
+        (100, 100),
     ],
 )
-def test_handles_boundaries_and_rounding(
-    scores: dict[str, int],
-    expected: int,
+def test_calculate_credibility_score_handles_extremes(
+    component_score: int,
+    expected_score: int,
 ) -> None:
-    result = calculate_credibility_score(**scores)
+    score = _calculate_score(
+        component_score,
+        component_score,
+        component_score,
+        component_score,
+    )
 
-    assert result == expected
+    assert score == expected_score
 
 
 @pytest.mark.parametrize(
-    ("field_name", "invalid_score"),
+    (
+        "source_reliability_score",
+        "evidence_quality_score",
+        "corroboration_score",
+        "content_quality_score",
+        "expected_score",
+    ),
     [
-        ("source_reliability_score", -1),
-        ("source_reliability_score", 101),
-        ("evidence_quality_score", -1),
-        ("evidence_quality_score", 101),
-        ("corroboration_score", -1),
-        ("corroboration_score", 101),
-        ("content_quality_score", -1),
-        ("content_quality_score", 101),
+        (1, 1, 1, 0, 1),
+        (1, 1, 0, 1, 1),
     ],
 )
-def test_rejects_scores_outside_valid_range(
-    field_name: str,
-    invalid_score: int,
+def test_calculate_credibility_score_rounds_to_nearest_integer(
+    source_reliability_score: int,
+    evidence_quality_score: int,
+    corroboration_score: int,
+    content_quality_score: int,
+    expected_score: int,
 ) -> None:
-    scores = {
-        "source_reliability_score": 50,
-        "evidence_quality_score": 50,
-        "corroboration_score": 50,
-        "content_quality_score": 50,
-    }
-    scores[field_name] = invalid_score
+    score = _calculate_score(
+        source_reliability_score,
+        evidence_quality_score,
+        corroboration_score,
+        content_quality_score,
+    )
 
+    assert score == expected_score
+
+
+@pytest.mark.parametrize(
+    (
+        "source_reliability_score",
+        "evidence_quality_score",
+        "corroboration_score",
+        "content_quality_score",
+    ),
+    [
+        (-1, 50, 50, 50),
+        (101, 50, 50, 50),
+        (50, -1, 50, 50),
+        (50, 101, 50, 50),
+        (50, 50, -1, 50),
+        (50, 50, 101, 50),
+        (50, 50, 50, -1),
+        (50, 50, 50, 101),
+    ],
+)
+def test_calculate_credibility_score_rejects_invalid_components(
+    source_reliability_score: int,
+    evidence_quality_score: int,
+    corroboration_score: int,
+    content_quality_score: int,
+) -> None:
     with pytest.raises(
         ValueError,
-        match=("Credibility component scores must be between 0 and 100"),
+        match="Credibility component scores must be between 0 and 100",
     ):
-        calculate_credibility_score(**scores)
+        _calculate_score(
+            source_reliability_score,
+            evidence_quality_score,
+            corroboration_score,
+            content_quality_score,
+        )
 
 
 @pytest.mark.parametrize(
-    ("score", "expected_rating"),
+    ("credibility_score", "expected_rating"),
     [
         (0, CredibilityRating.VERY_LOW),
         (19, CredibilityRating.VERY_LOW),
@@ -114,113 +143,81 @@ def test_rejects_scores_outside_valid_range(
         (60, CredibilityRating.HIGH),
         (79, CredibilityRating.HIGH),
         (80, CredibilityRating.VERY_HIGH),
+        (99, CredibilityRating.VERY_HIGH),
         (100, CredibilityRating.VERY_HIGH),
     ],
 )
-def test_returns_correct_credibility_rating(
-    score: int,
+def test_get_credibility_rating_uses_expected_boundaries(
+    credibility_score: int,
     expected_rating: CredibilityRating,
 ) -> None:
-    result = get_credibility_rating(score)
-
-    assert result is expected_rating
+    assert get_credibility_rating(credibility_score) is expected_rating
 
 
-@pytest.mark.parametrize("invalid_score", [-1, 101])
-def test_rejects_invalid_credibility_rating_score(
-    invalid_score: int,
+@pytest.mark.parametrize("credibility_score", [-1, 101])
+def test_get_credibility_rating_rejects_invalid_score(
+    credibility_score: int,
 ) -> None:
     with pytest.raises(
         ValueError,
         match="Credibility score must be between 0 and 100",
     ):
-        get_credibility_rating(invalid_score)
+        get_credibility_rating(credibility_score)
+
+
+def test_generate_credibility_reason_codes_returns_ordered_codes() -> None:
+    reason_codes = _generate_reason_codes(80, 90, 70, 60)
+
+    assert reason_codes == (
+        CredibilityReasonCode.SOURCE_RELIABILITY_HIGH,
+        CredibilityReasonCode.EVIDENCE_QUALITY_HIGH,
+        CredibilityReasonCode.CORROBORATION_MODERATE,
+        CredibilityReasonCode.CONTENT_QUALITY_MODERATE,
+    )
 
 
 @pytest.mark.parametrize(
-    ("score", "expected_reason_codes"),
+    ("component_score", "expected_suffix"),
     [
-        (
-            0,
-            (
-                CredibilityReasonCode.SOURCE_RELIABILITY_LOW,
-                CredibilityReasonCode.EVIDENCE_QUALITY_LOW,
-                CredibilityReasonCode.CORROBORATION_LOW,
-                CredibilityReasonCode.CONTENT_QUALITY_LOW,
-            ),
-        ),
-        (
-            59,
-            (
-                CredibilityReasonCode.SOURCE_RELIABILITY_LOW,
-                CredibilityReasonCode.EVIDENCE_QUALITY_LOW,
-                CredibilityReasonCode.CORROBORATION_LOW,
-                CredibilityReasonCode.CONTENT_QUALITY_LOW,
-            ),
-        ),
-        (
-            60,
-            (
-                CredibilityReasonCode.SOURCE_RELIABILITY_MODERATE,
-                CredibilityReasonCode.EVIDENCE_QUALITY_MODERATE,
-                CredibilityReasonCode.CORROBORATION_MODERATE,
-                CredibilityReasonCode.CONTENT_QUALITY_MODERATE,
-            ),
-        ),
-        (
-            79,
-            (
-                CredibilityReasonCode.SOURCE_RELIABILITY_MODERATE,
-                CredibilityReasonCode.EVIDENCE_QUALITY_MODERATE,
-                CredibilityReasonCode.CORROBORATION_MODERATE,
-                CredibilityReasonCode.CONTENT_QUALITY_MODERATE,
-            ),
-        ),
-        (
-            80,
-            (
-                CredibilityReasonCode.SOURCE_RELIABILITY_HIGH,
-                CredibilityReasonCode.EVIDENCE_QUALITY_HIGH,
-                CredibilityReasonCode.CORROBORATION_HIGH,
-                CredibilityReasonCode.CONTENT_QUALITY_HIGH,
-            ),
-        ),
-        (
-            100,
-            (
-                CredibilityReasonCode.SOURCE_RELIABILITY_HIGH,
-                CredibilityReasonCode.EVIDENCE_QUALITY_HIGH,
-                CredibilityReasonCode.CORROBORATION_HIGH,
-                CredibilityReasonCode.CONTENT_QUALITY_HIGH,
-            ),
-        ),
+        (59, "low"),
+        (60, "moderate"),
+        (79, "moderate"),
+        (80, "high"),
     ],
 )
-def test_generates_correct_reason_codes_at_boundaries(
-    score: int,
-    expected_reason_codes: tuple[CredibilityReasonCode, ...],
+def test_generate_credibility_reason_codes_uses_expected_boundaries(
+    component_score: int,
+    expected_suffix: str,
 ) -> None:
-    result = generate_credibility_reason_codes(
-        source_reliability_score=score,
-        evidence_quality_score=score,
-        corroboration_score=score,
-        content_quality_score=score,
+    reason_codes = _generate_reason_codes(
+        component_score,
+        component_score,
+        component_score,
+        component_score,
     )
 
-    assert result == expected_reason_codes
+    assert reason_codes == (
+        CredibilityReasonCode(f"source_reliability_{expected_suffix}"),
+        CredibilityReasonCode(f"evidence_quality_{expected_suffix}"),
+        CredibilityReasonCode(f"corroboration_{expected_suffix}"),
+        CredibilityReasonCode(f"content_quality_{expected_suffix}"),
+    )
 
 
 @pytest.mark.parametrize("invalid_score", [-1, 101])
-def test_rejects_invalid_reason_code_score(
+def test_generate_credibility_reason_codes_rejects_invalid_score(
     invalid_score: int,
 ) -> None:
     with pytest.raises(
         ValueError,
-        match=("Credibility component scores must be between 0 and 100"),
+        match="Credibility component scores must be between 0 and 100",
     ):
-        generate_credibility_reason_codes(
-            source_reliability_score=invalid_score,
-            evidence_quality_score=50,
-            corroboration_score=50,
-            content_quality_score=50,
-        )
+        _generate_reason_codes(invalid_score, 50, 50, 50)
+
+
+def test_get_source_reliability_high_message() -> None:
+    message = get_credibility_reason_message(
+        CredibilityReasonCode.SOURCE_RELIABILITY_HIGH
+    )
+
+    assert message == "The source has a strong reliability record."
