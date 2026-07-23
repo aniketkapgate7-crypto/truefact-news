@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.routers.credibility import router as credibility_router
+from app.routers.fact_checks import router as fact_checks_router
 from app.routers.news import router as news_router
 from app.routers.social_posts import router as social_posts_router
 
@@ -32,6 +33,7 @@ app = FastAPI(
 app.include_router(news_router)
 app.include_router(social_posts_router)
 app.include_router(credibility_router)
+app.include_router(fact_checks_router)
 
 
 @app.get(
