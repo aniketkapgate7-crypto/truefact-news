@@ -3,6 +3,11 @@ from app.schemas.credibility import (
     CredibilityAssessmentCreate,
     CredibilityAssessmentUpdate,
 )
+from app.schemas.fact_check import (
+    ArticleFactCheckResponse,
+    FactCheckMatchResponse,
+    FactCheckSearchResponse,
+)
 from app.schemas.news import (
     NewsArticle,
     NewsArticleCreate,
@@ -18,6 +23,9 @@ from app.schemas.social_post import (
 )
 
 __all__ = [
+    "ArticleFactCheckResponse",
+    "FactCheckMatchResponse",
+    "FactCheckSearchResponse",
     "NewsArticle",
     "NewsArticleCreate",
     "NewsArticleUpdate",
