@@ -7,6 +7,7 @@ from app.services.credibility import (
     CredibilityReasonCode,
     generate_credibility_reason_codes,
     get_credibility_rating,
+    get_credibility_reason_message,
 )
 
 
@@ -60,6 +61,11 @@ class CredibilityAssessmentUpdate(BaseModel):
     )
 
 
+class CredibilityReason(BaseModel):
+    code: CredibilityReasonCode
+    message: str
+
+
 class CredibilityAssessment(CredibilityAssessmentBase):
     model_config = ConfigDict(
         extra="forbid",
@@ -89,4 +95,17 @@ class CredibilityAssessment(CredibilityAssessmentBase):
             evidence_quality_score=self.evidence_quality_score,
             corroboration_score=self.corroboration_score,
             content_quality_score=self.content_quality_score,
+        )
+
+    @computed_field
+    @property
+    def credibility_reasons(
+        self,
+    ) -> tuple[CredibilityReason, ...]:
+        return tuple(
+            CredibilityReason(
+                code=reason_code,
+                message=get_credibility_reason_message(reason_code),
+            )
+            for reason_code in self.credibility_reason_codes
         )

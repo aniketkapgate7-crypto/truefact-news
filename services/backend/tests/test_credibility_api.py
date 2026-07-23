@@ -21,6 +21,25 @@ EXPECTED_REASON_CODES = [
     "content_quality_moderate",
 ]
 
+EXPECTED_CREDIBILITY_REASONS = [
+    {
+        "code": "source_reliability_high",
+        "message": "The source has a strong reliability record.",
+    },
+    {
+        "code": "evidence_quality_high",
+        "message": ("The article provides strong, verifiable supporting evidence."),
+    },
+    {
+        "code": "corroboration_moderate",
+        "message": "Some independent sources support the claim.",
+    },
+    {
+        "code": "content_quality_moderate",
+        "message": ("The content is generally clear but has some quality concerns."),
+    },
+]
+
 
 def _create_news_article(client: TestClient) -> int:
     response = client.post(
@@ -82,6 +101,7 @@ def test_create_credibility_assessment(client: TestClient) -> None:
     assert data["method_version"]
     assert data["assessed_at"]
     assert data["updated_at"]
+    assert data["credibility_reasons"] == EXPECTED_CREDIBILITY_REASONS
 
 
 def test_create_rejects_missing_news_article(client: TestClient) -> None:
