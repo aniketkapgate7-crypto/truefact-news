@@ -14,6 +14,24 @@ class CredibilityRating(StrEnum):
     VERY_HIGH = "very_high"
 
 
+class CredibilityReasonCode(StrEnum):
+    SOURCE_RELIABILITY_HIGH = "source_reliability_high"
+    SOURCE_RELIABILITY_MODERATE = "source_reliability_moderate"
+    SOURCE_RELIABILITY_LOW = "source_reliability_low"
+
+    EVIDENCE_QUALITY_HIGH = "evidence_quality_high"
+    EVIDENCE_QUALITY_MODERATE = "evidence_quality_moderate"
+    EVIDENCE_QUALITY_LOW = "evidence_quality_low"
+
+    CORROBORATION_HIGH = "corroboration_high"
+    CORROBORATION_MODERATE = "corroboration_moderate"
+    CORROBORATION_LOW = "corroboration_low"
+
+    CONTENT_QUALITY_HIGH = "content_quality_high"
+    CONTENT_QUALITY_MODERATE = "content_quality_moderate"
+    CONTENT_QUALITY_LOW = "content_quality_low"
+
+
 def calculate_credibility_score(
     *,
     source_reliability_score: int,
@@ -60,3 +78,64 @@ def get_credibility_rating(
         return CredibilityRating.HIGH
 
     return CredibilityRating.VERY_HIGH
+
+
+def _select_reason_code(
+    score: int,
+    *,
+    high: CredibilityReasonCode,
+    moderate: CredibilityReasonCode,
+    low: CredibilityReasonCode,
+) -> CredibilityReasonCode:
+    if score >= 80:
+        return high
+
+    if score >= 60:
+        return moderate
+
+    return low
+
+
+def generate_credibility_reason_codes(
+    *,
+    source_reliability_score: int,
+    evidence_quality_score: int,
+    corroboration_score: int,
+    content_quality_score: int,
+) -> tuple[CredibilityReasonCode, ...]:
+    scores = (
+        source_reliability_score,
+        evidence_quality_score,
+        corroboration_score,
+        content_quality_score,
+    )
+
+    if any(score < 0 or score > 100 for score in scores):
+        raise ValueError("Credibility component scores must be between 0 and 100")
+
+    return (
+        _select_reason_code(
+            source_reliability_score,
+            high=CredibilityReasonCode.SOURCE_RELIABILITY_HIGH,
+            moderate=CredibilityReasonCode.SOURCE_RELIABILITY_MODERATE,
+            low=CredibilityReasonCode.SOURCE_RELIABILITY_LOW,
+        ),
+        _select_reason_code(
+            evidence_quality_score,
+            high=CredibilityReasonCode.EVIDENCE_QUALITY_HIGH,
+            moderate=CredibilityReasonCode.EVIDENCE_QUALITY_MODERATE,
+            low=CredibilityReasonCode.EVIDENCE_QUALITY_LOW,
+        ),
+        _select_reason_code(
+            corroboration_score,
+            high=CredibilityReasonCode.CORROBORATION_HIGH,
+            moderate=CredibilityReasonCode.CORROBORATION_MODERATE,
+            low=CredibilityReasonCode.CORROBORATION_LOW,
+        ),
+        _select_reason_code(
+            content_quality_score,
+            high=CredibilityReasonCode.CONTENT_QUALITY_HIGH,
+            moderate=CredibilityReasonCode.CONTENT_QUALITY_MODERATE,
+            low=CredibilityReasonCode.CONTENT_QUALITY_LOW,
+        ),
+    )

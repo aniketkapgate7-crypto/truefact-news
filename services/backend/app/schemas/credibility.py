@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.services.credibility import (
     CredibilityRating,
+    CredibilityReasonCode,
+    generate_credibility_reason_codes,
     get_credibility_rating,
 )
 
@@ -76,3 +78,15 @@ class CredibilityAssessment(CredibilityAssessmentBase):
     @property
     def credibility_rating(self) -> CredibilityRating:
         return get_credibility_rating(self.credibility_score)
+
+    @computed_field
+    @property
+    def credibility_reason_codes(
+        self,
+    ) -> tuple[CredibilityReasonCode, ...]:
+        return generate_credibility_reason_codes(
+            source_reliability_score=self.source_reliability_score,
+            evidence_quality_score=self.evidence_quality_score,
+            corroboration_score=self.corroboration_score,
+            content_quality_score=self.content_quality_score,
+        )

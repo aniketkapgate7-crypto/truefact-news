@@ -2,7 +2,9 @@ import pytest
 
 from app.services.credibility import (
     CredibilityRating,
+    CredibilityReasonCode,
     calculate_credibility_score,
+    generate_credibility_reason_codes,
     get_credibility_rating,
 )
 
@@ -133,3 +135,92 @@ def test_rejects_invalid_credibility_rating_score(
         match="Credibility score must be between 0 and 100",
     ):
         get_credibility_rating(invalid_score)
+
+
+@pytest.mark.parametrize(
+    ("score", "expected_reason_codes"),
+    [
+        (
+            0,
+            (
+                CredibilityReasonCode.SOURCE_RELIABILITY_LOW,
+                CredibilityReasonCode.EVIDENCE_QUALITY_LOW,
+                CredibilityReasonCode.CORROBORATION_LOW,
+                CredibilityReasonCode.CONTENT_QUALITY_LOW,
+            ),
+        ),
+        (
+            59,
+            (
+                CredibilityReasonCode.SOURCE_RELIABILITY_LOW,
+                CredibilityReasonCode.EVIDENCE_QUALITY_LOW,
+                CredibilityReasonCode.CORROBORATION_LOW,
+                CredibilityReasonCode.CONTENT_QUALITY_LOW,
+            ),
+        ),
+        (
+            60,
+            (
+                CredibilityReasonCode.SOURCE_RELIABILITY_MODERATE,
+                CredibilityReasonCode.EVIDENCE_QUALITY_MODERATE,
+                CredibilityReasonCode.CORROBORATION_MODERATE,
+                CredibilityReasonCode.CONTENT_QUALITY_MODERATE,
+            ),
+        ),
+        (
+            79,
+            (
+                CredibilityReasonCode.SOURCE_RELIABILITY_MODERATE,
+                CredibilityReasonCode.EVIDENCE_QUALITY_MODERATE,
+                CredibilityReasonCode.CORROBORATION_MODERATE,
+                CredibilityReasonCode.CONTENT_QUALITY_MODERATE,
+            ),
+        ),
+        (
+            80,
+            (
+                CredibilityReasonCode.SOURCE_RELIABILITY_HIGH,
+                CredibilityReasonCode.EVIDENCE_QUALITY_HIGH,
+                CredibilityReasonCode.CORROBORATION_HIGH,
+                CredibilityReasonCode.CONTENT_QUALITY_HIGH,
+            ),
+        ),
+        (
+            100,
+            (
+                CredibilityReasonCode.SOURCE_RELIABILITY_HIGH,
+                CredibilityReasonCode.EVIDENCE_QUALITY_HIGH,
+                CredibilityReasonCode.CORROBORATION_HIGH,
+                CredibilityReasonCode.CONTENT_QUALITY_HIGH,
+            ),
+        ),
+    ],
+)
+def test_generates_correct_reason_codes_at_boundaries(
+    score: int,
+    expected_reason_codes: tuple[CredibilityReasonCode, ...],
+) -> None:
+    result = generate_credibility_reason_codes(
+        source_reliability_score=score,
+        evidence_quality_score=score,
+        corroboration_score=score,
+        content_quality_score=score,
+    )
+
+    assert result == expected_reason_codes
+
+
+@pytest.mark.parametrize("invalid_score", [-1, 101])
+def test_rejects_invalid_reason_code_score(
+    invalid_score: int,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=("Credibility component scores must be between 0 and 100"),
+    ):
+        generate_credibility_reason_codes(
+            source_reliability_score=invalid_score,
+            evidence_quality_score=50,
+            corroboration_score=50,
+            content_quality_score=50,
+        )
