@@ -1,18 +1,37 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { NewsCard } from "@/components/NewsCard";
-import { NEWS_STORIES } from "@/data/news";
+import { useNewsFeed } from "@/hooks/useNewsFeed";
 
 export default function HomeScreen() {
+  const { stories, isLoading, error, reload } = useNewsFeed();
+  const isInitialLoading = isLoading && stories.length === 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={NEWS_STORIES}
+        data={stories}
         keyExtractor={(story) => story.id}
         renderItem={({ item }) => <NewsCard story={item} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading && stories.length > 0}
+            onRefresh={() => void reload()}
+            colors={["#38BDF8"]}
+            tintColor="#38BDF8"
+          />
+        }
         ListHeaderComponent={
           <>
             <View style={styles.header}>
@@ -29,7 +48,6 @@ export default function HomeScreen() {
 
             <View style={styles.hero}>
               <Text style={styles.eyebrow}>REAL-TIME INTELLIGENCE</Text>
-
               <Text style={styles.title}>Stories ranked by credibility</Text>
 
               <Text style={styles.description}>
@@ -40,17 +58,42 @@ export default function HomeScreen() {
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Latest stories</Text>
-
               <Text style={styles.updateCount}>
-                {NEWS_STORIES.length} updates
+                {stories.length} updates
               </Text>
             </View>
           </>
         }
+        ListEmptyComponent={
+          <View style={styles.stateCard}>
+            {isInitialLoading ? (
+              <>
+                <ActivityIndicator color="#38BDF8" size="large" />
+                <Text style={styles.stateText}>Loading live news…</Text>
+              </>
+            ) : error ? (
+              <>
+                <Text style={styles.errorTitle}>Unable to load news</Text>
+                <Text style={styles.errorMessage}>{error}</Text>
+
+                <Pressable
+                  style={styles.retryButton}
+                  onPress={() => void reload()}
+                >
+                  <Text style={styles.retryText}>Try again</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Text style={styles.stateText}>No stories are available.</Text>
+            )}
+          </View>
+        }
         ListFooterComponent={
-          <Text style={styles.footer}>
-            AI-assisted analysis • Verify important information independently
-          </Text>
+          stories.length > 0 ? (
+            <Text style={styles.footer}>
+              AI-assisted analysis • Verify important information independently
+            </Text>
+          ) : null
         }
       />
     </SafeAreaView>
@@ -63,6 +106,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#07111F",
   },
   content: {
+    flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 20,
@@ -144,6 +188,44 @@ const styles = StyleSheet.create({
     color: "#38BDF8",
     fontSize: 12,
     fontWeight: "700",
+  },
+  stateCard: {
+    alignItems: "center",
+    backgroundColor: "#0E1D30",
+    borderColor: "#1D3855",
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 24,
+  },
+  stateText: {
+    color: "#9AABC0",
+    fontSize: 14,
+    marginTop: 14,
+    textAlign: "center",
+  },
+  errorTitle: {
+    color: "#FB7185",
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  errorMessage: {
+    color: "#9AABC0",
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: "#38BDF8",
+    borderRadius: 14,
+    marginTop: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  retryText: {
+    color: "#07111F",
+    fontSize: 13,
+    fontWeight: "900",
   },
   footer: {
     color: "#52657C",
