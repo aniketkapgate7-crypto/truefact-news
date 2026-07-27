@@ -3,6 +3,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import settings
 from app.routers.credibility import router as credibility_router
@@ -27,7 +29,32 @@ app = FastAPI(
         "Backend API for news aggregation, social engagement, "
         "and transparent credibility assessments."
     ),
+    docs_url="/docs" if settings.docs_enabled else None,
+    redoc_url="/redoc" if settings.docs_enabled else None,
+    openapi_url="/openapi.json" if settings.docs_enabled else None,
     lifespan=lifespan,
+)
+
+if settings.app_env == "production":
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=settings.allowed_host_list,
+    )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=False,
+    allow_methods=[
+        "DELETE",
+        "GET",
+        "HEAD",
+        "OPTIONS",
+        "PATCH",
+        "POST",
+        "PUT",
+    ],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(news_router)
@@ -45,7 +72,7 @@ def read_root() -> dict[str, str]:
     return {
         "name": settings.app_name,
         "status": "running",
-        "docs": "/docs",
+        "docs": "/docs" if settings.docs_enabled else "disabled",
     }
 
 
