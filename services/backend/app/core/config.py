@@ -42,18 +42,12 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [
-            origin.strip()
-            for origin in self.cors_origins.split(",")
-            if origin.strip()
+            origin.strip() for origin in self.cors_origins.split(",") if origin.strip()
         ]
 
     @property
     def allowed_host_list(self) -> list[str]:
-        return [
-            host.strip()
-            for host in self.allowed_hosts.split(",")
-            if host.strip()
-        ]
+        return [host.strip() for host in self.allowed_hosts.split(",") if host.strip()]
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> Self:
@@ -73,9 +67,7 @@ class Settings(BaseSettings):
             origin == "*" or not origin.startswith("https://")
             for origin in self.cors_origin_list
         ):
-            raise ValueError(
-                "Production CORS origins must use explicit HTTPS URLs."
-            )
+            raise ValueError("Production CORS origins must use explicit HTTPS URLs.")
 
         return self
 
