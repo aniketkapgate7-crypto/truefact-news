@@ -90,4 +90,3 @@ def test_database_url_normalization(
     settings = Settings(database_url=database_url, _env_file=None)
 
     assert settings.database_url == expected_url
-    
