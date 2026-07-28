@@ -64,3 +64,29 @@ def test_production_rejects_wildcard_hosts() -> None:
 def test_production_rejects_unsafe_cors(cors_origins: str) -> None:
     with pytest.raises(ValidationError, match="explicit HTTPS URLs"):
         _production_settings(cors_origins=cors_origins)
+
+
+@pytest.mark.parametrize(
+    ("database_url", "expected_url"),
+    [
+        (
+            "postgresql://dbuser:dbpass@db.internal:5432/truefact",
+            "postgresql+psycopg://dbuser:dbpass@db.internal:5432/truefact",
+        ),
+        (
+            "postgresql+psycopg://dbuser:dbpass@db.internal:5432/truefact",
+            "postgresql+psycopg://dbuser:dbpass@db.internal:5432/truefact",
+        ),
+        (
+            "sqlite:///./truefact_news.db",
+            "sqlite:///./truefact_news.db",
+        ),
+    ],
+)
+def test_database_url_normalization(
+    database_url: str,
+    expected_url: str,
+) -> None:
+    settings = Settings(database_url=database_url, _env_file=None)
+
+    assert settings.database_url == expected_url
