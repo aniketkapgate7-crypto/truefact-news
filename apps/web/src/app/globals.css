@@ -1,26 +1,125 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ─── Attribute-based dark mode ───────────────────────────────────── */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* ─── Design Tokens ───────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Brand */
+  --color-brand:          #DC2626;
+  --color-brand-hover:    #B91C1C;
+  --color-accent:         #1E40AF;
+
+  /* Credibility */
+  --color-cred-high:      #16A34A;
+  --color-cred-med:       #CA8A04;
+  --color-cred-low:       #DC2626;
+
+  /* Typography */
+  --font-sans:   var(--font-inter),    ui-sans-serif,  system-ui, sans-serif;
+  --font-serif:  var(--font-playfair), ui-serif,       Georgia,   serif;
+
+  /* Easing */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Keyframes ───────────────────────────────────────────────────── */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Base Styles ─────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100svh;
+  font-family: var(--font-sans);
+  background-color: #f8f7f5;   /* warm cream — light default */
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="dark"] body {
+  background-color: #0d1117;
+  color: #e6edf3;
+}
+
+/* ─── Reading Progress Bar ────────────────────────────────────────── */
+#reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, #DC2626 0%, #F97316 50%, #FBBF24 100%);
+  z-index: 9999;
+  transition: width 0.08s linear;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ─── Ticker Strip ────────────────────────────────────────────────── */
+.ticker-track {
+  display: flex;
+  white-space: nowrap;
+  animation: ticker 40s linear infinite;
+  width: max-content;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* ─── Article Prose ───────────────────────────────────────────────── */
+.article-prose {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.85;
+  color: #1a1a1a;
+  max-width: 65ch;
+}
+
+[data-theme="dark"] .article-prose {
+  color: #c9d1d9;
+}
+
+.article-prose h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  color: #111;
+  font-family: var(--font-serif);
+  line-height: 1.3;
+}
+
+[data-theme="dark"] .article-prose h2 {
+  color: #e6edf3;
+}
+
+.article-prose p {
+  margin-bottom: 1.5rem;
+}
+
+.article-prose p:first-of-type::first-letter {
+  font-size: 3.5rem;
+  font-weight: 700;
+  float: left;
+  line-height: 0.85;
+  margin-right: 0.15rem;
+  margin-top: 0.2rem;
+  color: #DC2626;
+  font-family: var(--font-serif);
+}
+
+/* ─── Utility ─────────────────────────────────────────────────────── */
+.fade-in {
+  animation: fadeIn 0.4s var(--ease-smooth) both;
 }
