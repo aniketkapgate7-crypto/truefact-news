@@ -221,3 +221,4 @@ def test_get_source_reliability_high_message() -> None:
     )
 
     assert message == "The source has a strong reliability record."
+

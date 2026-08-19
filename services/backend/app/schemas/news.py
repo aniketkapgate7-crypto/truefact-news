@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from typing import Self
 
 
 class NewsArticleBase(BaseModel):
@@ -26,11 +27,15 @@ class NewsArticle(NewsArticleBase):
     """Article returned by the API."""
 
     id: int = Field(gt=0)
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class NewsArticleUpdate(BaseModel):
+    """Fields that may be updated. All are optional but none may be set to null."""
+
     title: str | None = Field(default=None, min_length=5, max_length=250)
     summary: str | None = Field(default=None, min_length=10, max_length=1000)
     source_name: str | None = Field(default=None, min_length=2, max_length=150)
@@ -41,6 +46,18 @@ class NewsArticleUpdate(BaseModel):
     evidence_score: int | None = Field(default=None, ge=0, le=100)
     comment_count: int | None = Field(default=None, ge=0)
     repost_count: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def reject_explicit_nulls(self) -> Self:
+        """Prevent any explicitly supplied field from being set to null."""
+        model_fields_set = self.model_fields_set
+        for field in model_fields_set:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"Field '{field}' was explicitly set to null, "
+                    "which is not permitted on update."
+                )
+        return self
 
 
 class PaginationMetadata(BaseModel):

@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -33,7 +34,7 @@ router = APIRouter(
 DatabaseSession = Annotated[Session, Depends(get_db)]
 
 
-def get_fact_check_provider() -> FactCheckProvider:
+def get_fact_check_provider(request: Request) -> FactCheckProvider:
     api_key = settings.google_fact_check_api_key
 
     if api_key is None or not api_key.get_secret_value().strip():
@@ -42,11 +43,17 @@ def get_fact_check_provider() -> FactCheckProvider:
             detail="Fact-check service is not configured",
         )
 
+    # Reuse the shared AsyncClient from app.state for connection pooling
+    http_client: httpx.AsyncClient | None = getattr(
+        request.app.state, "http_client", None
+    )
+
     return GoogleFactCheckProvider(
         api_key=api_key.get_secret_value(),
         base_url=settings.google_fact_check_base_url,
         timeout_seconds=settings.google_fact_check_timeout_seconds,
         language_code=settings.google_fact_check_language_code,
+        http_client=http_client,
     )
 
 

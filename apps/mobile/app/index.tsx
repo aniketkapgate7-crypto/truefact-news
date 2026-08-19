@@ -13,7 +13,7 @@ import { NewsCard } from "@/components/NewsCard";
 import { useNewsFeed } from "@/hooks/useNewsFeed";
 
 export default function HomeScreen() {
-  const { stories, isLoading, error, reload } = useNewsFeed();
+  const { stories, isLoading, isRefreshing, error, reload } = useNewsFeed();
   const isInitialLoading = isLoading && stories.length === 0;
 
   return (
@@ -26,7 +26,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading && stories.length > 0}
+            refreshing={isRefreshing}
             onRefresh={() => void reload()}
             colors={["#38BDF8"]}
             tintColor="#38BDF8"

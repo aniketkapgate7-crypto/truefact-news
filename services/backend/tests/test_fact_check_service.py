@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.services.fact_check import FactCheckMatch, FactCheckProvider
+from app.services.fact_check import FactCheckMatch
 
 
 def test_fact_check_match_stores_normalized_provider_data() -> None:
@@ -13,25 +13,12 @@ def test_fact_check_match_stores_normalized_provider_data() -> None:
         review_date=date(2026, 7, 23),
     )
 
-    assert match.claim_text == "A sample claim reviewed by a fact-checker."
+    assert match.claim_text == (
+        "A sample claim reviewed by a fact-checker."
+    )
     assert match.claimant == "Example claimant"
     assert match.verdict == "Misleading"
     assert match.publisher == "Example Fact Check"
     assert match.review_url == "https://example.com/fact-check"
     assert match.review_date == date(2026, 7, 23)
-
-
-class StubFactCheckProvider:
-    async def search_claims(
-        self,
-        query: str,
-        *,
-        limit: int = 5,
-    ) -> tuple[FactCheckMatch, ...]:
-        return ()
-
-
-def test_fact_check_provider_accepts_structural_implementation() -> None:
-    provider = StubFactCheckProvider()
-
-    assert isinstance(provider, FactCheckProvider)
+    

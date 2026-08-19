@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.helpers import get_article_or_404
 from app.models.news import NewsArticleModel
 from app.schemas.news import (
     NewsArticle,
@@ -31,19 +32,6 @@ SortField = Literal[
 SortOrder = Literal["asc", "desc"]
 
 
-def _get_article_or_404(
-    article_id: int,
-    db: Session,
-) -> NewsArticleModel:
-    article = db.get(NewsArticleModel, article_id)
-
-    if article is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="News article not found",
-        )
-
-    return article
 
 
 @router.get(
@@ -172,7 +160,7 @@ def get_news_article(
     article_id: int,
     db: DatabaseSession,
 ) -> NewsArticleModel:
-    return _get_article_or_404(article_id, db)
+    return get_article_or_404(article_id, db)
 
 
 @router.patch(
@@ -185,19 +173,13 @@ def update_news_article(
     updates: NewsArticleUpdate,
     db: DatabaseSession,
 ) -> NewsArticleModel:
-    article = _get_article_or_404(article_id, db)
+    article = get_article_or_404(article_id, db)
     update_data = updates.model_dump(exclude_unset=True)
 
     if not update_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Provide at least one field to update",
-        )
-
-    if any(value is None for value in update_data.values()):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Updated fields cannot be null",
         )
 
     if "source_url" in update_data:
@@ -228,9 +210,16 @@ def delete_news_article(
     article_id: int,
     db: DatabaseSession,
 ) -> Response:
-    article = _get_article_or_404(article_id, db)
+    article = get_article_or_404(article_id, db)
 
-    db.delete(article)
-    db.commit()
+    try:
+        db.delete(article)
+        db.commit()
+    except Exception as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete the news article",
+        ) from error
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

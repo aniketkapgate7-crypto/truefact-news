@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.helpers import get_article_or_404
 from app.models.credibility import CredibilityAssessmentModel
 from app.models.news import NewsArticleModel
 from app.schemas.credibility import (
@@ -23,19 +24,6 @@ router = APIRouter(
 DatabaseSession = Annotated[Session, Depends(get_db)]
 
 
-def _get_article_or_404(
-    article_id: int,
-    db: Session,
-) -> NewsArticleModel:
-    article = db.get(NewsArticleModel, article_id)
-
-    if article is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="News article not found",
-        )
-
-    return article
 
 
 def _get_assessment_or_404(
@@ -78,7 +66,7 @@ def create_credibility_assessment(
     assessment: CredibilityAssessmentCreate,
     db: DatabaseSession,
 ) -> CredibilityAssessmentModel:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
 
     existing_statement = select(CredibilityAssessmentModel).where(
         CredibilityAssessmentModel.news_article_id == article_id
@@ -128,7 +116,7 @@ def get_credibility_assessment(
     article_id: int,
     db: DatabaseSession,
 ) -> CredibilityAssessmentModel:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
     return _get_assessment_or_404(article_id, db)
 
 
@@ -142,7 +130,7 @@ def update_credibility_assessment(
     updates: CredibilityAssessmentUpdate,
     db: DatabaseSession,
 ) -> CredibilityAssessmentModel:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
     assessment = _get_assessment_or_404(article_id, db)
 
     update_data = updates.model_dump(exclude_unset=True)
@@ -179,7 +167,7 @@ def delete_credibility_assessment(
     article_id: int,
     db: DatabaseSession,
 ) -> Response:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
     assessment = _get_assessment_or_404(article_id, db)
 
     db.delete(assessment)

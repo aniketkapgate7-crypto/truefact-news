@@ -2,11 +2,13 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import settings
+from app.routers.ai import router as ai_router
 from app.routers.credibility import router as credibility_router
 from app.routers.fact_checks import router as fact_checks_router
 from app.routers.news import router as news_router
@@ -16,15 +18,25 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    # Create a shared HTTP client for connection pooling (used by fact-check provider)
+    http_client = httpx.AsyncClient(
+        timeout=settings.google_fact_check_timeout_seconds,
+        follow_redirects=False,
+    )
+    application.state.http_client = http_client
+
     logger.info("%s started", settings.app_name)
-    yield
-    logger.info("%s stopped", settings.app_name)
+    try:
+        yield
+    finally:
+        await http_client.aclose()
+        logger.info("%s stopped", settings.app_name)
 
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.1.0",
+    version="1.1.0",
     description=(
         "Backend API for news aggregation, social engagement, "
         "and transparent credibility assessments."
@@ -61,6 +73,7 @@ app.include_router(news_router)
 app.include_router(social_posts_router)
 app.include_router(credibility_router)
 app.include_router(fact_checks_router)
+app.include_router(ai_router)
 
 
 @app.get(

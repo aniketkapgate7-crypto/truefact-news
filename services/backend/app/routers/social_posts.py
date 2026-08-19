@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.helpers import get_article_or_404
 from app.models.news import NewsArticleModel
 from app.models.social_post import SocialPostModel
 from app.schemas.social_post import (
@@ -25,19 +26,6 @@ router = APIRouter(
 DatabaseSession = Annotated[Session, Depends(get_db)]
 
 
-def _get_article_or_404(
-    article_id: int,
-    db: Session,
-) -> NewsArticleModel:
-    article = db.get(NewsArticleModel, article_id)
-
-    if article is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="News article not found",
-        )
-
-    return article
 
 
 def _get_social_post_or_404(
@@ -73,7 +61,7 @@ def create_social_post(
     social_post: SocialPostCreate,
     db: DatabaseSession,
 ) -> SocialPostModel:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
 
     post_data = social_post.model_dump()
     post_data["post_url"] = str(social_post.post_url)
@@ -103,7 +91,7 @@ def list_social_posts(
     article_id: int,
     db: DatabaseSession,
 ) -> SocialPostListResponse:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
 
     posts_statement = (
         select(SocialPostModel)
@@ -137,7 +125,7 @@ def get_engagement_summary(
     article_id: int,
     db: DatabaseSession,
 ) -> NewsEngagementSummary:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
 
     summary_statement = (
         select(
