@@ -3,9 +3,13 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from app.services.credibility import (
+    AssessmentStatus,
+    ConfidenceLevel,
     CredibilityRating,
     CredibilityReasonCode,
     generate_credibility_reason_codes,
+    get_assessment_status,
+    get_confidence_level,
     get_credibility_rating,
     get_credibility_reason_message,
 )
@@ -21,7 +25,18 @@ class CredibilityAssessmentBase(BaseModel):
     evidence_quality_score: int = Field(ge=0, le=100)
     corroboration_score: int = Field(ge=0, le=100)
     content_quality_score: int = Field(ge=0, le=100)
-    explanation: str = Field(min_length=10, max_length=3000)
+
+    supporting_evidence_count: int = Field(default=0, ge=0)
+    contradicting_evidence_count: int = Field(default=0, ge=0)
+    independent_source_count: int = Field(default=0, ge=0)
+    primary_source_count: int = Field(default=0, ge=0)
+
+    is_evolving: bool = False
+
+    explanation: str = Field(
+        min_length=10,
+        max_length=3000,
+    )
 
 
 class CredibilityAssessmentCreate(CredibilityAssessmentBase):
@@ -54,6 +69,26 @@ class CredibilityAssessmentUpdate(BaseModel):
         ge=0,
         le=100,
     )
+
+    supporting_evidence_count: int | None = Field(
+        default=None,
+        ge=0,
+    )
+    contradicting_evidence_count: int | None = Field(
+        default=None,
+        ge=0,
+    )
+    independent_source_count: int | None = Field(
+        default=None,
+        ge=0,
+    )
+    primary_source_count: int | None = Field(
+        default=None,
+        ge=0,
+    )
+
+    is_evolving: bool | None = None
+
     explanation: str | None = Field(
         default=None,
         min_length=10,
@@ -84,6 +119,22 @@ class CredibilityAssessment(CredibilityAssessmentBase):
     @property
     def credibility_rating(self) -> CredibilityRating:
         return get_credibility_rating(self.credibility_score)
+
+    @computed_field
+    @property
+    def assessment_status(self) -> AssessmentStatus:
+        return get_assessment_status(
+            supporting_evidence_count=self.supporting_evidence_count,
+            contradicting_evidence_count=(self.contradicting_evidence_count),
+        )
+
+    @computed_field
+    @property
+    def confidence_level(self) -> ConfidenceLevel:
+        return get_confidence_level(
+            independent_source_count=self.independent_source_count,
+            primary_source_count=self.primary_source_count,
+        )
 
     @computed_field
     @property
