@@ -4,10 +4,16 @@ SOURCE_RELIABILITY_WEIGHT = 30
 EVIDENCE_QUALITY_WEIGHT = 30
 CORROBORATION_WEIGHT = 25
 CONTENT_QUALITY_WEIGHT = 15
+CREDIBILITY_METHOD_VERSION = "rules-v2"
+
 MINIMUM_SCORE = 0
 MAXIMUM_SCORE = 100
+
 MODERATE_REASON_THRESHOLD = 60
 HIGH_REASON_THRESHOLD = 80
+
+MEDIUM_CONFIDENCE_SOURCE_THRESHOLD = 2
+HIGH_CONFIDENCE_SOURCE_THRESHOLD = 3
 
 
 class CredibilityRating(StrEnum):
@@ -16,6 +22,19 @@ class CredibilityRating(StrEnum):
     MEDIUM = "medium"
     HIGH = "high"
     VERY_HIGH = "very_high"
+
+
+class AssessmentStatus(StrEnum):
+    SUPPORTED = "supported"
+    DISPUTED = "disputed"
+    MIXED = "mixed"
+    UNVERIFIED = "unverified"
+
+
+class ConfidenceLevel(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 
 class CredibilityReasonCode(StrEnum):
@@ -87,6 +106,11 @@ def _validate_component_scores(scores: tuple[int, ...]) -> None:
         raise ValueError("Credibility component scores must be between 0 and 100")
 
 
+def _validate_evidence_counts(counts: tuple[int, ...]) -> None:
+    if any(count < 0 for count in counts):
+        raise ValueError("Evidence counts cannot be negative")
+
+
 def calculate_credibility_score(
     *,
     source_reliability_score: int,
@@ -134,6 +158,59 @@ def get_credibility_rating(
     return CredibilityRating.VERY_HIGH
 
 
+def get_assessment_status(
+    *,
+    supporting_evidence_count: int,
+    contradicting_evidence_count: int,
+) -> AssessmentStatus:
+    counts = (
+        supporting_evidence_count,
+        contradicting_evidence_count,
+    )
+
+    _validate_evidence_counts(counts)
+
+    if supporting_evidence_count == 0 and contradicting_evidence_count == 0:
+        return AssessmentStatus.UNVERIFIED
+
+    if supporting_evidence_count > 0 and contradicting_evidence_count > 0:
+        return AssessmentStatus.MIXED
+
+    if supporting_evidence_count > 0:
+        return AssessmentStatus.SUPPORTED
+
+    return AssessmentStatus.DISPUTED
+
+
+def get_confidence_level(
+    *,
+    independent_source_count: int,
+    primary_source_count: int,
+) -> ConfidenceLevel:
+    counts = (
+        independent_source_count,
+        primary_source_count,
+    )
+
+    _validate_evidence_counts(counts)
+
+    has_primary_source = primary_source_count > 0
+
+    if (
+        independent_source_count >= HIGH_CONFIDENCE_SOURCE_THRESHOLD
+        and has_primary_source
+    ):
+        return ConfidenceLevel.HIGH
+
+    if (
+        independent_source_count >= MEDIUM_CONFIDENCE_SOURCE_THRESHOLD
+        or has_primary_source
+    ):
+        return ConfidenceLevel.MEDIUM
+
+    return ConfidenceLevel.LOW
+
+
 def _select_reason_code(
     score: int,
     *,
@@ -170,7 +247,7 @@ def generate_credibility_reason_codes(
         _select_reason_code(
             source_reliability_score,
             high=CredibilityReasonCode.SOURCE_RELIABILITY_HIGH,
-            moderate=(CredibilityReasonCode.SOURCE_RELIABILITY_MODERATE),
+            moderate=CredibilityReasonCode.SOURCE_RELIABILITY_MODERATE,
             low=CredibilityReasonCode.SOURCE_RELIABILITY_LOW,
         ),
         _select_reason_code(

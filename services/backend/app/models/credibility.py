@@ -4,12 +4,14 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Integer,
     String,
     Text,
+    false,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,6 +44,22 @@ class CredibilityAssessmentModel(Base):
         CheckConstraint(
             "credibility_score BETWEEN 0 AND 100",
             name="ck_credibility_overall_score",
+        ),
+        CheckConstraint(
+            "supporting_evidence_count >= 0",
+            name="ck_credibility_supporting_evidence_count",
+        ),
+        CheckConstraint(
+            "contradicting_evidence_count >= 0",
+            name="ck_credibility_contradicting_evidence_count",
+        ),
+        CheckConstraint(
+            "independent_source_count >= 0",
+            name="ck_credibility_independent_source_count",
+        ),
+        CheckConstraint(
+            "primary_source_count >= 0",
+            name="ck_credibility_primary_source_count",
         ),
     )
 
@@ -81,6 +99,41 @@ class CredibilityAssessmentModel(Base):
         nullable=False,
     )
 
+    supporting_evidence_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+
+    contradicting_evidence_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+
+    independent_source_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+
+    primary_source_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+
+    is_evolving: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=false(),
+        nullable=False,
+    )
+
     credibility_score: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -93,7 +146,7 @@ class CredibilityAssessmentModel(Base):
 
     method_version: Mapped[str] = mapped_column(
         String(50),
-        default="rules-v1",
+        default="rules-v2",
         nullable=False,
     )
 
