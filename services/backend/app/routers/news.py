@@ -32,8 +32,6 @@ SortField = Literal[
 SortOrder = Literal["asc", "desc"]
 
 
-
-
 @router.get(
     "/",
     response_model=NewsFeedResponse,

@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.helpers import get_article_or_404
-from app.models.news import NewsArticleModel
 from app.models.social_post import SocialPostModel
 from app.schemas.social_post import (
     NewsEngagementSummary,
@@ -24,8 +23,6 @@ router = APIRouter(
 )
 
 DatabaseSession = Annotated[Session, Depends(get_db)]
-
-
 
 
 def _get_social_post_or_404(

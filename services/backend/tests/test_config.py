@@ -64,4 +64,3 @@ def test_production_rejects_wildcard_hosts() -> None:
 def test_production_rejects_unsafe_cors(cors_origins: str) -> None:
     with pytest.raises(ValidationError, match="explicit HTTPS URLs"):
         _production_settings(cors_origins=cors_origins)
-        

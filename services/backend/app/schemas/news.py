@@ -1,7 +1,7 @@
 from datetime import datetime
+from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
-from typing import Self
 
 
 class NewsArticleBase(BaseModel):
