@@ -6,14 +6,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.db.helpers import get_article_or_404
 from app.models.credibility import CredibilityAssessmentModel
-from app.models.news import NewsArticleModel
 from app.schemas.credibility import (
     CredibilityAssessment,
     CredibilityAssessmentCreate,
     CredibilityAssessmentUpdate,
 )
-from app.services.credibility import calculate_credibility_score
+from app.services.credibility import (
+    CREDIBILITY_METHOD_VERSION,
+    calculate_credibility_score,
+)
 
 router = APIRouter(
     prefix="/api/v1",
@@ -21,21 +24,6 @@ router = APIRouter(
 )
 
 DatabaseSession = Annotated[Session, Depends(get_db)]
-
-
-def _get_article_or_404(
-    article_id: int,
-    db: Session,
-) -> NewsArticleModel:
-    article = db.get(NewsArticleModel, article_id)
-
-    if article is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="News article not found",
-        )
-
-    return article
 
 
 def _get_assessment_or_404(
@@ -60,8 +48,8 @@ def _calculate_assessment_score(
     assessment: CredibilityAssessmentModel,
 ) -> int:
     return calculate_credibility_score(
-        source_reliability_score=(assessment.source_reliability_score),
-        evidence_quality_score=(assessment.evidence_quality_score),
+        source_reliability_score=assessment.source_reliability_score,
+        evidence_quality_score=assessment.evidence_quality_score,
         corroboration_score=assessment.corroboration_score,
         content_quality_score=assessment.content_quality_score,
     )
@@ -78,7 +66,7 @@ def create_credibility_assessment(
     assessment: CredibilityAssessmentCreate,
     db: DatabaseSession,
 ) -> CredibilityAssessmentModel:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
 
     existing_statement = select(CredibilityAssessmentModel).where(
         CredibilityAssessmentModel.news_article_id == article_id
@@ -87,14 +75,14 @@ def create_credibility_assessment(
     if db.scalar(existing_statement) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=("A credibility assessment already exists for this article"),
+            detail="A credibility assessment already exists for this article",
         )
 
     assessment_data = assessment.model_dump()
 
     credibility_score = calculate_credibility_score(
-        source_reliability_score=(assessment.source_reliability_score),
-        evidence_quality_score=(assessment.evidence_quality_score),
+        source_reliability_score=assessment.source_reliability_score,
+        evidence_quality_score=assessment.evidence_quality_score,
         corroboration_score=assessment.corroboration_score,
         content_quality_score=assessment.content_quality_score,
     )
@@ -102,6 +90,7 @@ def create_credibility_assessment(
     database_assessment = CredibilityAssessmentModel(
         news_article_id=article_id,
         credibility_score=credibility_score,
+        method_version=CREDIBILITY_METHOD_VERSION,
         **assessment_data,
     )
 
@@ -113,7 +102,7 @@ def create_credibility_assessment(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=("A credibility assessment already exists for this article"),
+            detail="A credibility assessment already exists for this article",
         ) from error
 
     return database_assessment
@@ -128,7 +117,7 @@ def get_credibility_assessment(
     article_id: int,
     db: DatabaseSession,
 ) -> CredibilityAssessmentModel:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
     return _get_assessment_or_404(article_id, db)
 
 
@@ -142,7 +131,7 @@ def update_credibility_assessment(
     updates: CredibilityAssessmentUpdate,
     db: DatabaseSession,
 ) -> CredibilityAssessmentModel:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
     assessment = _get_assessment_or_404(article_id, db)
 
     update_data = updates.model_dump(exclude_unset=True)
@@ -163,6 +152,7 @@ def update_credibility_assessment(
         setattr(assessment, field_name, value)
 
     assessment.credibility_score = _calculate_assessment_score(assessment)
+    assessment.method_version = CREDIBILITY_METHOD_VERSION
 
     db.commit()
     db.refresh(assessment)
@@ -179,7 +169,7 @@ def delete_credibility_assessment(
     article_id: int,
     db: DatabaseSession,
 ) -> Response:
-    _get_article_or_404(article_id, db)
+    get_article_or_404(article_id, db)
     assessment = _get_assessment_or_404(article_id, db)
 
     db.delete(assessment)

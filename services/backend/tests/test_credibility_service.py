@@ -1,10 +1,14 @@
 import pytest
 
 from app.services.credibility import (
+    AssessmentStatus,
+    ConfidenceLevel,
     CredibilityRating,
     CredibilityReasonCode,
     calculate_credibility_score,
     generate_credibility_reason_codes,
+    get_assessment_status,
+    get_confidence_level,
     get_credibility_rating,
     get_credibility_reason_message,
 )
@@ -221,3 +225,104 @@ def test_get_source_reliability_high_message() -> None:
     )
 
     assert message == "The source has a strong reliability record."
+
+
+@pytest.mark.parametrize(
+    (
+        "supporting_evidence_count",
+        "contradicting_evidence_count",
+        "expected_status",
+    ),
+    [
+        (0, 0, AssessmentStatus.UNVERIFIED),
+        (2, 0, AssessmentStatus.SUPPORTED),
+        (0, 2, AssessmentStatus.DISPUTED),
+        (2, 1, AssessmentStatus.MIXED),
+    ],
+)
+def test_get_assessment_status_uses_evidence_counts(
+    supporting_evidence_count: int,
+    contradicting_evidence_count: int,
+    expected_status: AssessmentStatus,
+) -> None:
+    status_result = get_assessment_status(
+        supporting_evidence_count=supporting_evidence_count,
+        contradicting_evidence_count=contradicting_evidence_count,
+    )
+
+    assert status_result is expected_status
+
+
+@pytest.mark.parametrize(
+    (
+        "supporting_evidence_count",
+        "contradicting_evidence_count",
+    ),
+    [
+        (-1, 0),
+        (0, -1),
+    ],
+)
+def test_get_assessment_status_rejects_negative_counts(
+    supporting_evidence_count: int,
+    contradicting_evidence_count: int,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="Evidence counts cannot be negative",
+    ):
+        get_assessment_status(
+            supporting_evidence_count=supporting_evidence_count,
+            contradicting_evidence_count=contradicting_evidence_count,
+        )
+
+
+@pytest.mark.parametrize(
+    (
+        "independent_source_count",
+        "primary_source_count",
+        "expected_confidence",
+    ),
+    [
+        (0, 0, ConfidenceLevel.LOW),
+        (1, 0, ConfidenceLevel.LOW),
+        (2, 0, ConfidenceLevel.MEDIUM),
+        (0, 1, ConfidenceLevel.MEDIUM),
+        (3, 1, ConfidenceLevel.HIGH),
+    ],
+)
+def test_get_confidence_level_uses_source_counts(
+    independent_source_count: int,
+    primary_source_count: int,
+    expected_confidence: ConfidenceLevel,
+) -> None:
+    confidence = get_confidence_level(
+        independent_source_count=independent_source_count,
+        primary_source_count=primary_source_count,
+    )
+
+    assert confidence is expected_confidence
+
+
+@pytest.mark.parametrize(
+    (
+        "independent_source_count",
+        "primary_source_count",
+    ),
+    [
+        (-1, 0),
+        (0, -1),
+    ],
+)
+def test_get_confidence_level_rejects_negative_counts(
+    independent_source_count: int,
+    primary_source_count: int,
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match="Evidence counts cannot be negative",
+    ):
+        get_confidence_level(
+            independent_source_count=independent_source_count,
+            primary_source_count=primary_source_count,
+        )
