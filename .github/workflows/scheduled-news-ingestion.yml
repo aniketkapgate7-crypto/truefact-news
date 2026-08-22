@@ -1,0 +1,50 @@
+name: Scheduled News Ingestion
+
+on:
+  schedule:
+    # Run hourly at minute 17 UTC to avoid top-of-hour congestion.
+    - cron: "17 * * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-news-ingestion
+  cancel-in-progress: false
+
+jobs:
+  ingest-news:
+    name: Ingest approved news feeds
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: services/backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/backend/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Ingest approved news feeds
+        env:
+          DATABASE_URL: ${{ secrets.NEWS_INGESTION_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::NEWS_INGESTION_DATABASE_URL is not configured."
+            exit 1
+          fi
+
+          python -m app.scripts.ingest_news
