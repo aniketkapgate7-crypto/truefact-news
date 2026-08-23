@@ -1,16 +1,24 @@
-import { type TickerItem } from "@/data/mockNews";
+/** Self-contained ticker item type — no mock-data dependency. */
+export interface TickerItem {
+  id: number;
+  text: string;
+  category: string;
+}
 
 interface BulletTickerProps {
   items: TickerItem[];
 }
 
 const categoryDots: Record<string, string> = {
-  Breaking:  "bg-red-500",
-  Politics:  "bg-blue-500",
-  World:     "bg-teal-500",
-  Business:  "bg-emerald-500",
-  Tech:      "bg-violet-500",
-  Lifestyle: "bg-rose-500",
+  Breaking:      "bg-red-500",
+  Politics:      "bg-blue-500",
+  World:         "bg-teal-500",
+  Business:      "bg-emerald-500",
+  Tech:          "bg-violet-500",
+  Science:       "bg-purple-500",
+  Sports:        "bg-amber-500",
+  Entertainment: "bg-rose-500",
+  Lifestyle:     "bg-indigo-500",
 };
 
 export function BulletTicker({ items }: BulletTickerProps) {
@@ -31,10 +39,19 @@ export function BulletTicker({ items }: BulletTickerProps) {
       <div className="flex-1 overflow-hidden py-2">
         <div className="ticker-track gap-0">
           {doubled.map((item, idx) => (
-            <span key={idx} className="inline-flex items-center gap-2.5 px-6 text-sm text-gray-700 dark:text-gray-300">
-              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${categoryDots[item.category] ?? "bg-gray-400"}`} />
+            <span
+              key={idx}
+              className="inline-flex items-center gap-2.5 px-6 text-sm text-gray-700 dark:text-gray-300"
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                  categoryDots[item.category] ?? "bg-gray-400"
+                }`}
+              />
               {item.text}
-              <span className="mx-2 text-gray-300 dark:text-gray-600 select-none">|</span>
+              <span className="mx-2 text-gray-300 dark:text-gray-600 select-none">
+                |
+              </span>
             </span>
           ))}
         </div>

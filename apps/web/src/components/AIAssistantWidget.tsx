@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useNewsContext } from "@/context/NewsContext";
+import type { NewsArticle } from "@/data/mockNews";
 
 interface Message {
   id: string;
@@ -13,7 +14,8 @@ interface Message {
 }
 
 export function AIAssistantWidget() {
-  const { activeArticle, selectedRegion } = useNewsContext();
+  const { activeArticle: rawActiveArticle, selectedRegion } = useNewsContext();
+  const activeArticle = rawActiveArticle as NewsArticle | null;
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
