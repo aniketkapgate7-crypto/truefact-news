@@ -1,7 +1,85 @@
 "use client";
 
 import { useState } from "react";
-import { officialPortalDirectory } from "@/data/mockNews";
+
+/** Static portal directory — no mock-news dependency */
+const officialPortalDirectory = [
+  {
+    name: "Snopes",
+    type: "Fact-Checker Portal",
+    url: "https://www.snopes.com",
+    searchUrl: "https://www.snopes.com/?s=",
+    logoText: "Snopes",
+    color: "bg-red-600",
+    badge: "IFCN Certified",
+    description: "Oldest and largest online fact-checking site.",
+  },
+  {
+    name: "Boom Live",
+    type: "Fact-Checker Portal",
+    url: "https://www.boomlive.in",
+    searchUrl: "https://www.boomlive.in/search?q=",
+    logoText: "BOOM",
+    color: "bg-amber-600",
+    badge: "IFCN Certified",
+    description:
+      "Independent digital fact-checking organization combating misinformation.",
+  },
+  {
+    name: "Alt News",
+    type: "Fact-Checker Portal",
+    url: "https://www.altnews.in",
+    searchUrl: "https://www.altnews.in/?s=",
+    logoText: "Alt News",
+    color: "bg-blue-600",
+    badge: "IFCN Certified",
+    description:
+      "Dedicated to debunking fake news, viral claims, and media bias.",
+  },
+  {
+    name: "PolitiFact",
+    type: "Fact-Checker Portal",
+    url: "https://www.politifact.com",
+    searchUrl: "https://www.politifact.com/search/?q=",
+    logoText: "PolitiFact",
+    color: "bg-indigo-600",
+    badge: "Pulitzer Winner",
+    description: "Truth-O-Meter rating scale for political statements.",
+  },
+  {
+    name: "Google Fact Check Explorer",
+    type: "Aggregator API",
+    url: "https://toolbox.google.com/factcheck/explorer",
+    searchUrl:
+      "https://toolbox.google.com/factcheck/explorer/search/",
+    logoText: "Google FC",
+    color: "bg-emerald-600",
+    badge: "Global Index",
+    description: "Search claims indexed by Google Fact Check Markup.",
+  },
+  {
+    name: "PIB Fact Check (Government)",
+    type: "Official Regulatory",
+    url: "https://factcheck.pib.gov.in",
+    searchUrl: "https://factcheck.pib.gov.in",
+    logoText: "PIB Govt",
+    color: "bg-purple-600",
+    badge: "Official Govt",
+    description:
+      "Official press bureau fact-checking unit for government policies.",
+  },
+  {
+    name: "WHO Mythbusters",
+    type: "Health & Official",
+    url: "https://www.who.int/emergencies/diseases/novel-coronavirus-2019/advice-for-public/myth-busters",
+    searchUrl:
+      "https://www.who.int/home/search?indexCatalog=genericsearch&searchQuery=",
+    logoText: "WHO",
+    color: "bg-sky-600",
+    badge: "UN Health",
+    description: "Official World Health Organization health verification.",
+  },
+];
 
 export function OfficialPortals() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -11,10 +89,11 @@ export function OfficialPortals() {
       <div className="flex flex-wrap items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4 mb-5 gap-4">
         <div>
           <h3 className="font-serif text-lg font-bold text-gray-900 dark:text-white">
-            Official Regulatory & Fact-Checking Portals Directory
+            Official Regulatory &amp; Fact-Checking Portals Directory
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Direct access to IFCN-certified independent checkers, government bureaus, and global health authorities.
+            Direct access to IFCN-certified independent checkers, government
+            bureaus, and global health authorities.
           </p>
         </div>
 
@@ -74,7 +153,11 @@ export function OfficialPortals() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-between w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-800 dark:text-gray-200 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all"
               >
-                <span>{searchQuery.trim() ? `Search "${searchQuery.slice(0, 15)}..."` : "Open Portal"}</span>
+                <span>
+                  {searchQuery.trim()
+                    ? `Search "${searchQuery.slice(0, 15)}..."`
+                    : "Open Portal"}
+                </span>
                 <span>↗</span>
               </a>
             </div>

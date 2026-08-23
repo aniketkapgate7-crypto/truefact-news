@@ -1,10 +1,11 @@
 "use client";
 
-import { REGION_LIST, type Region } from "@/data/mockNews";
+import { LIVE_REGION_LIST } from "@/types/news";
+import type { LiveRegion } from "@/types/news";
 
 interface RegionFilterBarProps {
-  selectedRegion: Region | "All";
-  onSelectRegion: (region: Region | "All") => void;
+  selectedRegion: LiveRegion | "All";
+  onSelectRegion: (region: LiveRegion | "All") => void;
 }
 
 export function RegionFilterBar({
@@ -17,7 +18,7 @@ export function RegionFilterBar({
         <span>📍</span> Filter by Country:
       </span>
 
-      {REGION_LIST.map((item) => {
+      {LIVE_REGION_LIST.map((item) => {
         const isSelected = selectedRegion === item.code;
 
         return (

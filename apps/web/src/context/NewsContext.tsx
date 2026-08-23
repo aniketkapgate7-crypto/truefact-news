@@ -1,13 +1,19 @@
 "use client";
 
 import React, { createContext, useContext, useState } from "react";
-import type { NewsArticle, Region } from "@/data/mockNews";
+import type { LiveRegion } from "@/types/news";
 
+/**
+ * The context stores the currently viewed article as `unknown` so it can
+ * accept both `LiveArticle` (from the live homepage) and `NewsArticle`
+ * (from the mock article route) without a type conflict.
+ * Each consumer is responsible for narrowing or casting the value.
+ */
 interface NewsContextType {
-  activeArticle: NewsArticle | null;
-  setActiveArticle: (article: NewsArticle | null) => void;
-  selectedRegion: Region | "All";
-  setSelectedRegion: (region: Region | "All") => void;
+  activeArticle: unknown;
+  setActiveArticle: (article: unknown) => void;
+  selectedRegion: LiveRegion | "All";
+  setSelectedRegion: (region: LiveRegion | "All") => void;
 }
 
 const NewsContext = createContext<NewsContextType>({
@@ -18,8 +24,8 @@ const NewsContext = createContext<NewsContextType>({
 });
 
 export function NewsProvider({ children }: { children: React.ReactNode }) {
-  const [activeArticle, setActiveArticle] = useState<NewsArticle | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState<Region | "All">("All");
+  const [activeArticle, setActiveArticle] = useState<unknown>(null);
+  const [selectedRegion, setSelectedRegion] = useState<LiveRegion | "All">("All");
 
   return (
     <NewsContext.Provider

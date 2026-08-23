@@ -64,6 +64,38 @@ export interface ApiCredibilityAssessment {
   updated_at: string;
 }
 
+export interface PaginationMetadata {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
+/** Paginated news-feed response from GET /api/v1/news/ */
+export interface NewsFeedResponse {
+  items: ApiNewsArticle[];
+  pagination: PaginationMetadata;
+}
+
+export type NewsSortBy =
+  | "published_at"
+  | "evidence_score"
+  | "comment_count"
+  | "repost_count";
+
+export type NewsSortOrder = "asc" | "desc";
+
+export interface NewsFeedOptions {
+  page?: number;
+  page_size?: number;
+  region?: string;
+  category?: string;
+  sort_by?: NewsSortBy;
+  sort_order?: NewsSortOrder;
+}
+
 function getApiBaseUrl(): string {
   const apiBaseUrl = process.env.API_BASE_URL?.trim();
 
@@ -126,4 +158,56 @@ export function getCredibilityAssessment(
   return fetchApiResource<ApiCredibilityAssessment>(
     `/api/v1/news/${articleId}/credibility-assessment`,
   );
+}
+
+/**
+ * Fetch a paginated, sorted list of live news articles.
+ * Always uses cache: "no-store" so results reflect the current feed.
+ */
+export async function getNewsFeed(
+  options: NewsFeedOptions = {},
+): Promise<ApiNewsArticle[]> {
+  const {
+    page = 1,
+    page_size = 30,
+    region,
+    category,
+    sort_by = "published_at",
+    sort_order = "desc",
+  } = options;
+
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("page_size", String(page_size));
+  params.set("sort_by", sort_by);
+  params.set("sort_order", sort_order);
+  if (region) params.set("region", region);
+  if (category) params.set("category", category);
+
+  const path = `/api/v1/news/?${params.toString()}`;
+
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+
+  const data = (await response.json()) as unknown;
+
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "items" in data &&
+    Array.isArray((data as NewsFeedResponse).items) &&
+    "pagination" in data &&
+    typeof (data as NewsFeedResponse).pagination === "object" &&
+    (data as NewsFeedResponse).pagination !== null
+  ) {
+    return (data as NewsFeedResponse).items;
+  }
+
+  throw new Error("Invalid API response format for news feed");
 }
