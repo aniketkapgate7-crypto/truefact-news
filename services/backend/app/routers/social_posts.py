@@ -5,6 +5,8 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.guards import require_admin_mutation_access
+from app.core.permissions import require_admin_role
 from app.db.database import get_db
 from app.models.news import NewsArticleModel
 from app.models.social_post import SocialPostModel
@@ -67,6 +69,10 @@ def _raise_duplicate_error(error: IntegrityError) -> NoReturn:
     response_model=SocialPost,
     status_code=status.HTTP_201_CREATED,
     summary="Add a social post to a news article",
+    dependencies=[
+        Depends(require_admin_mutation_access),
+        Depends(require_admin_role),
+    ],
 )
 def create_social_post(
     article_id: int,
@@ -200,6 +206,10 @@ def get_social_post(
     "/social-posts/{social_post_id}",
     response_model=SocialPost,
     summary="Update social-post metrics",
+    dependencies=[
+        Depends(require_admin_mutation_access),
+        Depends(require_admin_role),
+    ],
 )
 def update_social_post(
     social_post_id: int,
@@ -252,6 +262,10 @@ def update_social_post(
     "/social-posts/{social_post_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a social post",
+    dependencies=[
+        Depends(require_admin_mutation_access),
+        Depends(require_admin_role),
+    ],
 )
 def delete_social_post(
     social_post_id: int,

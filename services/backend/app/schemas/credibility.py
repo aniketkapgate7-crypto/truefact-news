@@ -7,6 +7,8 @@ from app.services.credibility import (
     ConfidenceLevel,
     CredibilityRating,
     CredibilityReasonCode,
+    FactCheckVerdict,
+    ReviewStatus,
     generate_credibility_reason_codes,
     get_assessment_status,
     get_confidence_level,
@@ -115,6 +117,20 @@ class CredibilityAssessment(CredibilityAssessmentBase):
     assessed_at: datetime
     updated_at: datetime
 
+    # Editorial review fields
+    review_status: ReviewStatus = ReviewStatus.AUTOMATED
+    verdict: FactCheckVerdict | None = None
+    reviewer_id: str | None = None
+    reviewer_name: str | None = None
+    claim: str | None = None
+    claimant: str | None = None
+    claim_date: datetime | None = None
+    conclusion: str | None = None
+    correction_summary: str | None = None
+    review_version: int = 1
+    reviewed_at: datetime | None = None
+    review_published_at: datetime | None = None
+
     @computed_field
     @property
     def credibility_rating(self) -> CredibilityRating:
@@ -160,3 +176,20 @@ class CredibilityAssessment(CredibilityAssessmentBase):
             )
             for reason_code in self.credibility_reason_codes
         )
+
+
+class EditorialReviewUpdate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    review_status: ReviewStatus | None = None
+    verdict: FactCheckVerdict | None = None
+    reviewer_id: str | None = None
+    reviewer_name: str | None = None
+    claim: str | None = None
+    claimant: str | None = None
+    claim_date: datetime | None = None
+    conclusion: str | None = None
+    correction_summary: str | None = None

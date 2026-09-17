@@ -5,6 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.guards import require_admin_mutation_access
+from app.core.permissions import require_admin_role
 from app.db.database import get_db
 from app.db.helpers import get_article_or_404
 from app.models.credibility import CredibilityAssessmentModel
@@ -60,6 +62,10 @@ def _calculate_assessment_score(
     response_model=CredibilityAssessment,
     status_code=status.HTTP_201_CREATED,
     summary="Create a credibility assessment",
+    dependencies=[
+        Depends(require_admin_mutation_access),
+        Depends(require_admin_role),
+    ],
 )
 def create_credibility_assessment(
     article_id: int,
@@ -125,6 +131,10 @@ def get_credibility_assessment(
     "/news/{article_id}/credibility-assessment",
     response_model=CredibilityAssessment,
     summary="Update a credibility assessment",
+    dependencies=[
+        Depends(require_admin_mutation_access),
+        Depends(require_admin_role),
+    ],
 )
 def update_credibility_assessment(
     article_id: int,
@@ -164,6 +174,10 @@ def update_credibility_assessment(
     "/news/{article_id}/credibility-assessment",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a credibility assessment",
+    dependencies=[
+        Depends(require_admin_mutation_access),
+        Depends(require_admin_role),
+    ],
 )
 def delete_credibility_assessment(
     article_id: int,

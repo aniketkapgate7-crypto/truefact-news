@@ -1,4 +1,7 @@
+import pytest
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.usefixtures("admin_mutations_enabled")
 
 
 def make_news_article(slug: str) -> dict[str, object]:

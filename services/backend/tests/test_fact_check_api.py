@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from uuid import uuid4
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -12,6 +13,8 @@ from app.services.google_fact_check import (
     FactCheckProviderError,
     FactCheckProviderTimeoutError,
 )
+
+pytestmark = pytest.mark.usefixtures("admin_mutations_enabled")
 
 EXPECTED_DISCLAIMER = (
     "Matches are previously published fact checks. No match does not prove "
