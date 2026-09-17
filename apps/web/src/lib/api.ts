@@ -438,31 +438,33 @@ export async function getSavedStories(
   token: string,
   limit = 20,
   offset = 0,
-): Promise<PaginatedSavedStoriesResponse | null> {
-  if (!token || !token.trim()) return null;
-  try {
-    const response = await fetch(
-      `${getApiBaseUrl()}/api/v1/users/me/saved-stories?limit=${limit}&offset=${offset}`,
-      {
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token.trim()}`,
-        },
-      },
-    );
-    if (!response.ok) return null;
-    return (await response.json()) as PaginatedSavedStoriesResponse;
-  } catch {
-    return null;
+): Promise<PaginatedSavedStoriesResponse> {
+  if (!token || !token.trim()) {
+    throw new Error("Authentication credentials were not provided");
   }
+  const response = await fetch(
+    `${getApiBaseUrl()}/api/v1/users/me/saved-stories?limit=${limit}&offset=${offset}`,
+    {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token.trim()}`,
+      },
+    },
+  );
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+  return (await response.json()) as PaginatedSavedStoriesResponse;
 }
 
 export async function saveStoryApi(
   token: string,
   articleId: number,
-): Promise<SavedStoryResponse | null> {
-  if (!token || !token.trim()) return null;
+): Promise<SavedStoryResponse> {
+  if (!token || !token.trim()) {
+    throw new Error("Authentication credentials were not provided");
+  }
   const response = await fetch(
     `${getApiBaseUrl()}/api/v1/users/me/saved-stories/${articleId}`,
     {
@@ -483,17 +485,23 @@ export async function removeSavedStoryApi(
   token: string,
   articleId: number,
 ): Promise<boolean> {
-  if (!token || !token.trim()) return false;
+  if (!token || !token.trim()) {
+    throw new Error("Authentication credentials were not provided");
+  }
   const response = await fetch(
     `${getApiBaseUrl()}/api/v1/users/me/saved-stories/${articleId}`,
     {
       method: "DELETE",
       headers: {
+        Accept: "application/json",
         Authorization: `Bearer ${token.trim()}`,
       },
     },
   );
-  return response.ok;
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+  return true;
 }
 
 export async function getSourceWatchlists(

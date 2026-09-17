@@ -30,7 +30,7 @@ export default function PrivacyPage() {
           <ul>
             <li><strong>Usage Data:</strong> Basic telemetry such as page views, region selection, and search queries to optimize article delivery.</li>
             <li><strong>Submitted Claims:</strong> When you submit a claim or link via our Verify a Claim interface, we store the query text to perform verification searches and enqueue investigation requests.</li>
-            <li><strong>Local Preferences:</strong> Theme settings (light/dark mode) and bookmarked stories are stored locally on your device via browser local storage.</li>
+            <li><strong>Local Preferences:</strong> Theme settings (light/dark mode) are stored locally on your device via browser local storage. Saved stories and watchlists are securely persisted to your authenticated user account.</li>
           </ul>
 
           <h2>2. How We Use Information</h2>
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
 
           <h2>3. Cookies &amp; Local Storage</h2>
           <p>
-            We use essential cookies and local storage items strictly for site functionality (e.g. remembering your theme preference and saved stories). We do not deploy intrusive cross-site tracking cookies.
+            We use essential cookies and local storage items strictly for site functionality (e.g. remembering your theme preference). We do not deploy intrusive cross-site tracking cookies.
           </p>
 
           <h2>4. Security &amp; Retention</h2>

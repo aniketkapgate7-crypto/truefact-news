@@ -16,6 +16,7 @@ import { EditorialNewsCard } from "@/components/editorial/EditorialNewsCard";
 import { EditorialArticleImage } from "@/components/editorial/EditorialArticleImage";
 import { ReadingProgress } from "@/components/ReadingProgress";
 import { getCredibilityTier } from "@/lib/credibilityTokens";
+import { ArticleActions } from "@/components/user/ArticleActions";
 import type { LiveArticle } from "@/types/news";
 
 interface Props {
@@ -196,12 +197,15 @@ export default async function ArticlePage({ params }: Props) {
             <time dateTime={article.published_at}>{formattedDate}</time>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Compact Credibility Tag */}
             <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 font-bold ${tier.borderColor} ${tier.bgColor} ${tier.textColor}`}>
               <span className={`h-2 w-2 rounded-full ${tier.dotColor}`} />
               <span>{article.credibility_score ? `Credibility ${article.credibility_score}` : "Pending Assessment"}</span>
             </div>
+
+            {/* Authenticated Save / Watch Actions */}
+            <ArticleActions articleId={article.id} />
           </div>
         </div>
 

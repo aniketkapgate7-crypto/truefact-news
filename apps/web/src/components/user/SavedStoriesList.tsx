@@ -2,28 +2,101 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { SavedStoryResponse, removeSavedStoryApi } from "@/lib/api";
+import { useAuth } from "@clerk/nextjs";
+import { SavedStoryResponse, getSavedStories, removeSavedStoryApi } from "@/lib/api";
 
 interface SavedStoriesListProps {
-  initialStories: SavedStoryResponse[];
-  token: string;
+  initialStories?: SavedStoryResponse[];
+  initialError?: string | null;
+  token?: string | null;
 }
 
-export function SavedStoriesList({ initialStories, token }: SavedStoriesListProps) {
+export function SavedStoriesList({
+  initialStories = [],
+  initialError = null,
+  token: initialToken = null,
+}: SavedStoriesListProps) {
+  const { getToken } = useAuth();
   const [stories, setStories] = useState<SavedStoryResponse[]>(initialStories);
+  const [error, setError] = useState<string | null>(initialError);
+  const [isLoading, setIsLoading] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+
+  const handleRetry = async () => {
+    setIsLoading(true);
+    setError(null);
+    setRemoveError(null);
+    try {
+      let token = initialToken;
+      if (!token) {
+        token = await getToken();
+      }
+      if (!token) {
+        throw new Error("Authentication credentials missing. Please sign in again.");
+      }
+      const res = await getSavedStories(token, 50, 0);
+      setStories(res.items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load saved stories from backend.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleRemove = async (articleId: number) => {
     setRemovingId(articleId);
+    setRemoveError(null);
     try {
+      let token = initialToken;
+      if (!token) {
+        token = await getToken();
+      }
+      if (!token) {
+        throw new Error("Authentication credentials missing. Please sign in again.");
+      }
       const ok = await removeSavedStoryApi(token, articleId);
       if (ok) {
         setStories((prev) => prev.filter((s) => s.article_id !== articleId));
       }
+    } catch (err) {
+      setRemoveError(err instanceof Error ? err.message : "Failed to remove story.");
     } finally {
       setRemovingId(null);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0D121F] p-12 text-center space-y-3">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[#E5242A] border-t-transparent" />
+        <p className="text-xs text-gray-600 dark:text-gray-400">Loading saved stories from backend…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 p-8 text-center space-y-4 shadow-sm">
+        <span className="text-3xl">⚠️</span>
+        <h3 className="text-base font-serif font-bold text-gray-900 dark:text-white">
+          Unable to Load Saved Stories
+        </h3>
+        <p className="text-xs text-rose-700 dark:text-rose-300 max-w-md mx-auto leading-relaxed">
+          {error}
+        </p>
+        <div>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="inline-flex items-center justify-center rounded-lg bg-[#E5242A] px-4 py-2 text-xs font-bold text-white hover:bg-[#c9181e] transition-colors shadow-sm"
+          >
+            Retry Loading Stories
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (stories.length === 0) {
     return (
@@ -51,6 +124,22 @@ export function SavedStoriesList({ initialStories, token }: SavedStoriesListProp
 
   return (
     <div className="space-y-4">
+      {removeError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between gap-2"
+        >
+          <span>⚠️ {removeError}</span>
+          <button
+            type="button"
+            onClick={() => setRemoveError(null)}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-white font-mono text-xs px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {stories.map((story) => (
         <div
           key={story.id}
@@ -75,12 +164,20 @@ export function SavedStoriesList({ initialStories, token }: SavedStoriesListProp
             </Link>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <Link
               href={`/article/${story.article_id}`}
               className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               Read Article
+            </Link>
+
+            <Link
+              href={`/evidence/${story.article_id}`}
+              className="rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors flex items-center gap-1"
+            >
+              <span>Evidence</span>
+              <span className="text-[10px]">→</span>
             </Link>
 
             <button

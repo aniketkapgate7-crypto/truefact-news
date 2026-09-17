@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { EditorialHeader } from "@/components/editorial/EditorialHeader";
 import { EditorialFooter } from "@/components/editorial/EditorialFooter";
-import { getSavedStories } from "@/lib/api";
+import { getSavedStories, type SavedStoryResponse } from "@/lib/api";
 import { SavedStoriesList } from "@/components/user/SavedStoriesList";
 
 export const metadata = {
@@ -66,8 +66,21 @@ export default async function SavedStoriesPage() {
     );
   }
 
-  const token = await getToken();
-  const savedStories = token ? await getSavedStories(token) : null;
+  let token: string | null = null;
+  let savedStories: SavedStoryResponse[] = [];
+  let fetchError: string | null = null;
+
+  try {
+    token = await getToken();
+    if (!token) {
+      fetchError = "Authentication token missing. Please sign in again.";
+    } else {
+      const res = await getSavedStories(token);
+      savedStories = res.items;
+    }
+  } catch (err) {
+    fetchError = err instanceof Error ? err.message : "Failed to load saved stories from backend";
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-[#070A10]">
@@ -87,7 +100,11 @@ export default async function SavedStoriesPage() {
           </p>
         </div>
 
-        <SavedStoriesList initialStories={savedStories?.items ?? []} token={token ?? ""} />
+        <SavedStoriesList
+          initialStories={savedStories}
+          initialError={fetchError}
+          token={token}
+        />
       </main>
 
       <EditorialFooter />

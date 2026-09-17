@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 import { IntelligenceSidebar, type NavSection } from "@/components/dashboard/IntelligenceSidebar";
 import { CommandBar } from "@/components/dashboard/CommandBar";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { IntelligenceFeed, type FeedFilterMode } from "@/components/dashboard/IntelligenceFeed";
 import { StoryIntelligencePanel } from "@/components/dashboard/StoryIntelligencePanel";
 import { useNewsContext } from "@/context/NewsContext";
+import { getSavedStories, saveStoryApi, removeSavedStoryApi } from "@/lib/api";
 import type { LiveArticle } from "@/types/news";
 
 interface LiveHomePageProps {
@@ -15,6 +18,7 @@ interface LiveHomePageProps {
 
 export function LiveHomePage({ articles }: LiveHomePageProps) {
   const { selectedRegion, setSelectedRegion, setActiveArticle } = useNewsContext();
+  const { isSignedIn, getToken } = useAuth();
 
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,38 +26,118 @@ export function LiveHomePage({ articles }: LiveHomePageProps) {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
   const [savedArticleIds, setSavedArticleIds] = useState<Set<number>>(new Set());
+  const [pendingSaveIds, setPendingSaveIds] = useState<Set<number>>(new Set());
+  const [saveNotification, setSaveNotification] = useState<{
+    type: "error" | "info";
+    message: string;
+    showSignIn?: boolean;
+  } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Load saved bookmarks from localStorage
+  // Load saved stories exclusively from backend API when authenticated
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("tf-saved-stories");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setSavedArticleIds(new Set(parsed));
-        }
-      }
-    } catch {
-      // ignore
+    if (!isSignedIn) {
+      setSavedArticleIds(new Set());
+      return;
     }
-  }, []);
 
-  const handleToggleSave = (id: number) => {
-    setSavedArticleIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+    let isMounted = true;
+    getToken()
+      .then((token) => {
+        if (!token || !isMounted) return null;
+        return getSavedStories(token, 100, 0);
+      })
+      .then((res) => {
+        if (!isMounted || !res) return;
+        const ids = new Set(res.items.map((item) => item.article_id));
+        setSavedArticleIds(ids);
+      })
+      .catch((err) => {
+        console.error("Failed to load saved stories from backend:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isSignedIn, getToken]);
+
+  const handleToggleSave = async (id: number) => {
+    const isClerkConfigured =
+      typeof process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
+      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.trim().length > 0;
+
+    if (!isClerkConfigured) {
+      setSaveNotification({
+        type: "info",
+        message: "Saved stories are unavailable: authentication is not configured in this environment.",
+        showSignIn: false,
+      });
+      return;
+    }
+
+    if (!isSignedIn) {
+      setSaveNotification({
+        type: "info",
+        message: "Sign in to save stories to your personal reading list.",
+        showSignIn: true,
+      });
+      return;
+    }
+
+    if (pendingSaveIds.has(id)) {
+      return;
+    }
+
+    setPendingSaveIds((prev) => new Set(prev).add(id));
+    setSaveNotification(null);
+
+    const isCurrentlySaved = savedArticleIds.has(id);
+
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error("Authentication session expired. Please sign in again.");
+      }
+
+      if (isCurrentlySaved) {
+        await removeSavedStoryApi(token, id);
+        setSavedArticleIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        setSaveNotification({
+          type: "info",
+          message: "Story removed from your saved list.",
+          showSignIn: false,
+        });
       } else {
-        next.add(id);
+        await saveStoryApi(token, id);
+        setSavedArticleIds((prev) => {
+          const next = new Set(prev);
+          next.add(id);
+          return next;
+        });
+        setSaveNotification({
+          type: "info",
+          message: "Story saved to your personal reading list.",
+          showSignIn: false,
+        });
       }
-      try {
-        localStorage.setItem("tf-saved-stories", JSON.stringify(Array.from(next)));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update saved story.";
+      setSaveNotification({
+        type: "error",
+        message: msg,
+        showSignIn: false,
+      });
+    } finally {
+      setPendingSaveIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
   const handleRefresh = () => {
@@ -180,6 +264,38 @@ export function LiveHomePage({ articles }: LiveHomePageProps) {
 
         {/* Workspace Container */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full">
+          {saveNotification && (
+            <div
+              role="status"
+              className={`rounded-lg border px-4 py-2.5 text-xs flex items-center justify-between gap-3 shadow-md transition-all ${
+                saveNotification.type === "error"
+                  ? "border-red-900/60 bg-red-950/50 text-red-200"
+                  : "border-[#1E334A] bg-[#112337] text-[#E8EEF8]"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span>{saveNotification.type === "error" ? "⚠️" : "🔖"}</span>
+                <span>{saveNotification.message}</span>
+                {saveNotification.showSignIn && (
+                  <Link
+                    href="/sign-in?redirect_url=/"
+                    className="font-bold underline text-[#38BDF8] ml-1 hover:text-white transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSaveNotification(null)}
+                className="text-[#8191A8] hover:text-white font-mono text-xs px-1"
+                aria-label="Dismiss notification"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Intelligence Overview Metrics Strip */}
           <section aria-label="Intelligence Metrics Overview">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">

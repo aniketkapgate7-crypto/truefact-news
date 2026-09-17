@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { saveStoryApi, removeSavedStoryApi, createSourceWatchlistApi } from "@/lib/api";
+import {
+  saveStoryApi,
+  removeSavedStoryApi,
+  createSourceWatchlistApi,
+  getSavedStories,
+} from "@/lib/api";
 
 interface ArticleActionsProps {
   articleId: number;
@@ -18,23 +23,53 @@ export function ArticleActions({ articleId, isPro = false }: ArticleActionsProps
   const [loadingWatch, setLoadingWatch] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const isClerkConfigured =
+    typeof process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.trim().length > 0;
+
+  // Fetch initial saved status directly from the backend
+  useEffect(() => {
+    if (!isSignedIn || !isClerkConfigured) return;
+    let isMounted = true;
+
+    getToken()
+      .then((token) => {
+        if (!token || !isMounted) return null;
+        return getSavedStories(token, 100, 0);
+      })
+      .then((res) => {
+        if (!isMounted || !res) return;
+        const isArticleSaved = res.items.some((item) => item.article_id === articleId);
+        setSaved(isArticleSaved);
+      })
+      .catch(() => {
+        // Leave default if background fetch fails
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isSignedIn, getToken, articleId, isClerkConfigured]);
+
   const handleSaveToggle = async () => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || loadingSave) return;
     setLoadingSave(true);
     setMessage(null);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) {
+        throw new Error("Authentication token missing. Please sign in again.");
+      }
 
       if (saved) {
-        const ok = await removeSavedStoryApi(token, articleId);
-        if (ok) setSaved(false);
+        await removeSavedStoryApi(token, articleId);
+        setSaved(false);
       } else {
-        const res = await saveStoryApi(token, articleId);
-        if (res) setSaved(true);
+        await saveStoryApi(token, articleId);
+        setSaved(true);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to save story";
+      const msg = err instanceof Error ? err.message : "Failed to update saved story";
       setMessage(msg);
     } finally {
       setLoadingSave(false);
@@ -42,12 +77,14 @@ export function ArticleActions({ articleId, isPro = false }: ArticleActionsProps
   };
 
   const handleWatchSource = async () => {
-    if (!isSignedIn || !isPro) return;
+    if (!isSignedIn || !isPro || loadingWatch) return;
     setLoadingWatch(true);
     setMessage(null);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) {
+        throw new Error("Authentication token missing. Please sign in again.");
+      }
 
       const res = await createSourceWatchlistApi(token, articleId);
       if (res) setWatched(true);
@@ -59,14 +96,28 @@ export function ArticleActions({ articleId, isPro = false }: ArticleActionsProps
     }
   };
 
+  if (!isClerkConfigured) {
+    return (
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-flex items-center gap-1 rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 px-2.5 py-1 text-[11px] font-medium text-gray-400 cursor-not-allowed"
+          title="Saved stories are unavailable: authentication is not configured in this environment."
+        >
+          <span>🔖</span> Save (Unavailable)
+        </span>
+      </div>
+    );
+  }
+
   if (!isLoaded || !isSignedIn) {
     return (
       <div className="flex items-center gap-2">
         <Link
-          href="/sign-in"
+          href={`/sign-in?redirect_url=/article/${articleId}`}
+          title="Sign in to save stories"
           className="inline-flex items-center gap-1 rounded border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-2.5 py-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
-          <span>🔖</span> Save
+          <span>🔖</span> Sign in to Save
         </Link>
         <Link
           href="/pricing"
