@@ -61,15 +61,8 @@ export function LiveHomePage({ articles }: LiveHomePageProps) {
     window.location.reload();
   };
 
-  // 1. Filter out invalid/fixture items like id=1 "string"
-  const validArticles = useMemo<LiveArticle[]>(() => {
-    return articles.filter(
-      (a) =>
-        a.id !== 1 &&
-        a.title.trim().toLowerCase() !== "string" &&
-        !a.source_url.includes("example.com")
-    );
-  }, [articles]);
+  // Render full API response honestly without client-side fixture hiding
+  const validArticles = articles;
 
   // 2. Real Derived Metrics (strictly from API records)
   const totalLiveArticles = validArticles.length;

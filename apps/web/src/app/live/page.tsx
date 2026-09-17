@@ -1,8 +1,8 @@
 import { StickyHeader } from "@/components/StickyHeader";
-import { BulletTicker } from "@/components/BulletTicker";
+import { BulletTicker, type TickerItem } from "@/components/BulletTicker";
 import { LiveStreamSection } from "@/components/LiveStreamSection";
 import { OfficialPortals } from "@/components/OfficialPortals";
-import { tickerItems } from "@/data/mockNews";
+import { getNewsFeed } from "@/lib/api";
 
 export const metadata = {
   title: "Live Broadcasts & Real-Time Stream Analysis — TrueFact News",
@@ -10,11 +10,22 @@ export const metadata = {
     "Watch 24/7 live news streams integrated with real-time automated transcript matching, on-screen red flag scanning, and IFCN fact checks.",
 };
 
-export default function LiveNewsPage() {
+export default async function LiveNewsPage() {
+  const articles = await getNewsFeed({
+    page_size: 10,
+    sort_by: "published_at",
+    sort_order: "desc",
+  }).catch(() => []);
+  const tickerItems: TickerItem[] = (articles ?? []).map((item) => ({
+    id: item.id,
+    text: item.title,
+    category: item.category,
+  }));
+
   return (
     <div className="flex min-h-screen flex-col bg-[#f8f7f5] dark:bg-[#0d1117]">
       <StickyHeader />
-      <BulletTicker items={tickerItems} />
+      {tickerItems.length > 0 && <BulletTicker items={tickerItems} />}
 
       <main className="mx-auto w-full max-w-screen-xl px-4 py-8 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col gap-2">

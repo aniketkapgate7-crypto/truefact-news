@@ -60,13 +60,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     hasError = true;
   }
 
-  // Filter out invalid/fixture items
-  const validArticles = articles.filter(
-    (a) =>
-      a.id !== 1 &&
-      a.title.trim().toLowerCase() !== "string" &&
-      !a.source_url.includes("example.com")
-  );
+  // Render full API response honestly without client-side fixture hiding
+  const validArticles = articles;
 
   // Apply search/category/region filters
   const filteredArticles = validArticles.filter((a) => {

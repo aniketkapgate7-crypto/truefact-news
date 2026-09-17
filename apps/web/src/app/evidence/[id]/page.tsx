@@ -115,12 +115,17 @@ function extractEvidenceSources(
   // 1. Primary article source URL
   if (article.source_url && !seenUrls.has(article.source_url)) {
     seenUrls.add(article.source_url);
-    const isNasa = article.source_url.includes("nasa.gov");
+    let hostname = "Source";
+    try {
+      hostname = new URL(article.source_url).hostname;
+    } catch {
+      // fallback
+    }
     sources.push({
       title: article.title,
       url: article.source_url,
       type: "primary",
-      publisher: article.source_name || (isNasa ? "NASA" : "Publisher"),
+      publisher: article.source_name || hostname,
       description: "Primary institutional announcement and original release.",
     });
   }
@@ -132,70 +137,21 @@ function extractEvidenceSources(
       for (const url of urlMatches) {
         if (!seenUrls.has(url)) {
           seenUrls.add(url);
-          if (url.includes("nasa.gov/directorates/armd/tacp/ui/uli/")) {
-            sources.push({
-              title: "NASA University Leadership Initiative (ULI) Program Repository",
-              url,
-              type: "institutional",
-              publisher: "NASA Aeronautics Research Mission Directorate (ARMD)",
-              description:
-                "Official institutional program repository detailing research initiatives, university consortia, and award criteria.",
-            });
-          } else if (url.includes("evtolinsights.com")) {
-            sources.push({
-              title: "NASA Selects Four University Teams for Advanced Aviation Research Projects",
-              url,
-              type: "independent",
-              publisher: "eVTOL Insights (Independent Aviation Media)",
-              description:
-                "Independent aviation industry reporting corroborating the four university team selections and project scopes.",
-            });
-          } else {
-            let hostname = "Source";
-            try {
-              hostname = new URL(url).hostname;
-            } catch {
-              // fallback
-            }
-            sources.push({
-              title: "Supporting Evidence Reference",
-              url,
-              type: "supporting",
-              publisher: hostname,
-              description: "Verified reference documentation cited in the assessment.",
-            });
+          let hostname = "Source";
+          try {
+            hostname = new URL(url).hostname;
+          } catch {
+            // fallback
           }
+          sources.push({
+            title: "Supporting Evidence Reference",
+            url,
+            type: "supporting",
+            publisher: hostname,
+            description: "Verified reference documentation cited in the assessment.",
+          });
         }
       }
-    }
-  }
-
-  // Known verified sources for Article 7
-  if (article.id === 7) {
-    const uliUrl = "https://www.nasa.gov/directorates/armd/tacp/ui/uli/";
-    if (!seenUrls.has(uliUrl)) {
-      seenUrls.add(uliUrl);
-      sources.push({
-        title: "NASA University Leadership Initiative (ULI) Program Repository",
-        url: uliUrl,
-        type: "institutional",
-        publisher: "NASA Aeronautics Research Mission Directorate (ARMD)",
-        description:
-          "Official institutional program repository detailing research initiatives, university consortia, and award criteria.",
-      });
-    }
-    const evtolUrl =
-      "https://evtolinsights.com/nasa-selects-four-university-teams-for-advanced-aviation-research-projects/";
-    if (!seenUrls.has(evtolUrl)) {
-      seenUrls.add(evtolUrl);
-      sources.push({
-        title: "NASA Selects Four University Teams for Advanced Aviation Research Projects",
-        url: evtolUrl,
-        type: "independent",
-        publisher: "eVTOL Insights (Independent Aviation Media)",
-        description:
-          "Independent aviation industry reporting corroborating the four university team selections and project scopes.",
-      });
     }
   }
 
@@ -470,7 +426,7 @@ export default async function EvidencePage({ params }: EvidencePageProps) {
             </section>
 
             {/* Traceable Evidence Registry */}
-            {evidenceSources.length > 0 && (
+            {evidenceSources.length > 0 ? (
               <section className="rounded-xl border border-[#1E334A] bg-[#0D1B2A] p-5 sm:p-6 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E334A] pb-3">
                   <div>
@@ -525,6 +481,17 @@ export default async function EvidencePage({ params }: EvidencePageProps) {
                     );
                   })}
                 </div>
+              </section>
+            ) : (
+              <section className="rounded-xl border border-[#1E334A] bg-[#0D1B2A] p-5 sm:p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1E334A] pb-3">
+                  <h2 className="font-sans text-sm font-semibold text-[#E8EEF8]">
+                    Verified Evidence Sources (0)
+                  </h2>
+                </div>
+                <p className="text-xs text-[#8191A8]">
+                  No external evidence links are available for this assessment.
+                </p>
               </section>
             )}
           </>

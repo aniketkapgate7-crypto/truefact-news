@@ -1,7 +1,55 @@
 "use client";
 
 import { useState } from "react";
-import { liveChannels, type LiveStreamChannel } from "@/data/mockNews";
+
+export interface LiveStreamChannel {
+  id: string;
+  name: string;
+  channel: string;
+  embedId: string;
+  badge: string;
+  viewerCount: string;
+  description: string;
+}
+
+export const liveChannels: LiveStreamChannel[] = [
+  {
+    id: "bbc",
+    name: "BBC News Live",
+    channel: "BBC World News",
+    embedId: "gCNeDWCI0vo",
+    badge: "BREAKING LIVE",
+    viewerCount: "142K watching",
+    description: "24/7 global news coverage with live automated transcript analysis."
+  },
+  {
+    id: "ndtv",
+    name: "NDTV 24x7 Live",
+    channel: "NDTV India",
+    embedId: "WB-y7_n6W-o",
+    badge: "24/7 BROADCAST",
+    viewerCount: "88K watching",
+    description: "India & South Asia continuous news stream with fact-check ticker."
+  },
+  {
+    id: "aljazeera",
+    name: "Al Jazeera English Live",
+    channel: "Al Jazeera",
+    embedId: "bNyUyrR0PHo",
+    badge: "BREAKING LIVE",
+    viewerCount: "210K watching",
+    description: "International breaking news and independent field reporting."
+  },
+  {
+    id: "wion",
+    name: "WION World Is One",
+    channel: "WION",
+    embedId: "V93_f-Fv74w",
+    badge: "OFFICIAL STREAM",
+    viewerCount: "65K watching",
+    description: "Global opinion, geopolitical analysis, and live debate."
+  }
+];
 
 export function LiveStreamSection() {
   const [activeChannel, setActiveChannel] = useState<LiveStreamChannel>(liveChannels[0]);

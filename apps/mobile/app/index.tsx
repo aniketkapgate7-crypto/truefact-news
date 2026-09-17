@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 
 import { TopCommandBar } from "@/components/TopCommandBar";
 import { MetricCardsStrip } from "@/components/MetricCardsStrip";
@@ -21,7 +22,7 @@ import { SkeletonCard } from "@/components/SkeletonCard";
 import { useNewsFeed } from "@/hooks/useNewsFeed";
 import { COLORS } from "@/constants/theme";
 
-type BottomNavTab = "overview" | "feed" | "verify" | "saved";
+type BottomNavTab = "overview" | "feed" | "verify";
 
 export default function HomeScreen() {
   const {
@@ -50,15 +51,8 @@ export default function HomeScreen() {
     }
   };
 
-  // 1. Exclude test fixtures (id 1 "string")
-  const validStories = useMemo(() => {
-    return stories.filter(
-      (s) =>
-        s.id !== "1" &&
-        s.headline.toLowerCase().trim() !== "string" &&
-        !s.sourceUrl.includes("example.com")
-    );
-  }, [stories]);
+  // Render full API response honestly without client-side fixture hiding
+  const validStories = stories;
 
   // 2. Real Derived Metrics
   const totalStoriesCount = validStories.length;
@@ -253,6 +247,9 @@ export default function HomeScreen() {
           style={styles.navItem}
           onPress={() => setActiveTab("overview")}
           hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Overview feed tab"
+          accessibilityState={{ selected: activeTab === "overview" }}
         >
           <Text style={[styles.navIcon, activeTab === "overview" && styles.navIconActive]}>
             ⚡
@@ -271,6 +268,9 @@ export default function HomeScreen() {
           style={styles.navItem}
           onPress={() => setActiveTab("feed")}
           hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Live news feed tab"
+          accessibilityState={{ selected: activeTab === "feed" }}
         >
           <Text style={[styles.navIcon, activeTab === "feed" && styles.navIconActive]}>
             📡
@@ -287,37 +287,19 @@ export default function HomeScreen() {
 
         <Pressable
           style={styles.navItem}
-          onPress={() => setActiveTab("verify")}
+          onPress={() => {
+            router.push("/verify" as any);
+          }}
           hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel="Verify claim tab"
+          accessibilityHint="Navigates to the live claim verification screen"
         >
-          <Text style={[styles.navIcon, activeTab === "verify" && styles.navIconActive]}>
+          <Text style={styles.navIcon}>
             🛡️
           </Text>
-          <Text
-            style={[
-              styles.navLabel,
-              activeTab === "verify" && styles.navLabelActive,
-            ]}
-          >
+          <Text style={styles.navLabel}>
             Verify
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.navItem}
-          onPress={() => setActiveTab("saved")}
-          hitSlop={6}
-        >
-          <Text style={[styles.navIcon, activeTab === "saved" && styles.navIconActive]}>
-            📑
-          </Text>
-          <Text
-            style={[
-              styles.navLabel,
-              activeTab === "saved" && styles.navLabelActive,
-            ]}
-          >
-            Saved
           </Text>
         </Pressable>
       </View>

@@ -36,8 +36,7 @@ export function EditorialArticleImage({
     src &&
     typeof src === "string" &&
     src.trim().length > 0 &&
-    (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) &&
-    !src.includes("example.com")
+    (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/"))
   );
 
   const showFallback = !isValidUrl || hasError;
