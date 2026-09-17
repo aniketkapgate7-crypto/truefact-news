@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import { NewsProvider } from "@/context/NewsContext";
-import { AIAssistantWidget } from "@/components/AIAssistantWidget";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -18,14 +18,32 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "TrueFact News — News You Can Verify",
+  title: "TrueFact News — Read the news. See the evidence. Check the claim.",
   description:
-    "Real-time news ranked by credibility & truthiness %. Multi-source verification, Gemini AI fact-checking, and live stream analysis.",
-  keywords: ["news", "fact check", "credibility", "breaking news", "journalism", "AI fact check"],
+    "A modern news platform where every story includes transparent credibility information, multi-source corroboration, and traceable evidence.",
+  keywords: [
+    "news",
+    "fact check",
+    "credibility",
+    "breaking news",
+    "journalism",
+    "verified news",
+    "evidence",
+  ],
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  ),
   openGraph: {
-    title: "TrueFact News",
-    description: "News you can verify. Credibility-ranked stories in real time with Gemini AI.",
+    title: "TrueFact News — Read the news. See the evidence. Check the claim.",
+    description:
+      "A modern news platform with transparent credibility scores and traceable evidence.",
     type: "website",
+    siteName: "TrueFact News",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TrueFact News",
+    description: "Read the news. See the evidence. Check the claim.",
   },
 };
 
@@ -39,19 +57,17 @@ export default function RootLayout({
       className={`${inter.variable} ${playfair.variable}`}
     >
       <head>
-        {/* No-flash dark mode: reads localStorage before first paint */}
+        {/* No-flash theme reader: reads localStorage before first paint */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('tf-theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
           }}
         />
       </head>
-      <body className="min-h-screen antialiased">
-        <NewsProvider>
-          {children}
-          {/* Floating Context-Aware Gemini AI Assistant */}
-          <AIAssistantWidget />
-        </NewsProvider>
+      <body className="min-h-screen antialiased bg-white dark:bg-[#0B0F17] text-[#111827] dark:text-[#F3F4F6] transition-colors">
+        <AuthProvider>
+          <NewsProvider>{children}</NewsProvider>
+        </AuthProvider>
       </body>
     </html>
   );

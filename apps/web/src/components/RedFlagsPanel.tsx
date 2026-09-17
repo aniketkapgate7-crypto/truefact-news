@@ -40,7 +40,6 @@ export function RedFlagsPanel({ redFlags }: RedFlagsPanelProps) {
           const isHigh = flag.severity === "high";
           const isMedium = flag.severity === "medium";
           const isLow = flag.severity === "low";
-          const isPositive = flag.severity === "positive";
 
           const icon = isHigh
             ? "🚨"

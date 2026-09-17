@@ -111,6 +111,47 @@ export function evidenceScoreLabel(score: number): string {
   return `Evidence score: ${score}/100`;
 }
 
+/**
+ * Returns a human-readable credibility label from the assessment engine score.
+ *
+ * - `null` / `undefined` / `0`  → "Assessment pending"
+ * - Any positive integer         → "Credibility: {score}%"
+ */
+export function credibilityScoreLabel(
+  score: number | null | undefined,
+): string {
+  if (score == null || score <= 0) return "Assessment pending";
+  return `Credibility: ${score}%`;
+}
+
+export function isHighCredibility(score: number | null | undefined): boolean {
+  return typeof score === "number" && score >= 80;
+}
+
+export function credibilityRatingLabel(
+  score: number | null | undefined,
+): string {
+  if (score == null || score <= 0) return "Assessment pending";
+  if (score >= 80) return `${score}% High Credibility`;
+  if (score >= 60) return `${score}% Moderate Credibility`;
+  return `${score}% Low Credibility`;
+}
+
+export function credibilityBadgeClasses(
+  score: number | null | undefined,
+): string {
+  if (score == null || score <= 0) {
+    return "bg-gray-900/90 border-gray-500/40 text-gray-300";
+  }
+  if (score >= 80) {
+    return "bg-emerald-950/90 border-emerald-400/80 text-emerald-300 shadow-sm";
+  }
+  if (score >= 60) {
+    return "bg-amber-950/90 border-amber-400/80 text-amber-300 shadow-sm";
+  }
+  return "bg-rose-950/90 border-rose-400/80 text-rose-300 shadow-sm";
+}
+
 /* ── Time ago helper ─────────────────────────────────────────────── */
 
 export function timeAgo(isoString: string): string {

@@ -3,7 +3,8 @@ import type { LiveArticle } from "@/types/news";
 import { LIVE_CATEGORY_COLORS } from "@/types/news";
 import {
   categoryGradient,
-  evidenceScoreLabel,
+  credibilityBadgeClasses,
+  credibilityScoreLabel,
   regionFlag,
   timeAgo,
 } from "@/lib/liveUtils";
@@ -39,19 +40,59 @@ function EvidenceLink({ articleId }: { articleId: number }) {
   );
 }
 
+/**
+ * Thumbnail for live news cards.
+ *
+ * Shows the article's hero image when available with lazy loading and
+ * object-cover cropping. Falls back to a category-branded gradient when the
+ * image_url is absent or the image fails to load.
+ */
+function CardThumbnail({
+  article,
+  className,
+}: {
+  article: LiveArticle;
+  className: string;
+}) {
+  const gradient = categoryGradient(article.category);
+
+  if (!article.image_url) {
+    return (
+      <div className={`bg-gradient-to-br ${gradient} ${className}`} />
+    );
+  }
+
+  return (
+    <div className={`relative overflow-hidden ${className}`}>
+      {/* Fallback gradient shown while the image loads or if it errors */}
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 bg-gradient-to-br ${gradient}`}
+      />
+      <img
+        src={article.image_url}
+        alt={article.title}
+        loading="lazy"
+        decoding="async"
+        className="relative h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+        onError={(e) => {
+          // Hide broken image so the gradient fallback beneath shows through
+          (e.currentTarget as HTMLImageElement).style.display = "none";
+        }}
+      />
+    </div>
+  );
+}
+
 export function LiveNewsCard({ article, variant = "default" }: LiveNewsCardProps) {
   const gradient = categoryGradient(article.category);
   const flag = regionFlag(article.region);
-  const scoreLabel = evidenceScoreLabel(article.evidence_score);
-  const isPending = !article.evidence_score || article.evidence_score <= 0;
+  const scoreLabel = credibilityScoreLabel(article.credibility_score);
+  const badgeClass = credibilityBadgeClasses(article.credibility_score);
 
   const scoreChip = (
     <span
-      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold backdrop-blur-md ${
-        isPending
-          ? "bg-black/80 border-amber-500/40 text-amber-400"
-          : "bg-black/80 border-emerald-500/40 text-emerald-400"
-      }`}
+      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold backdrop-blur-md ${badgeClass}`}
     >
       {scoreLabel}
     </span>
@@ -61,14 +102,35 @@ export function LiveNewsCard({ article, variant = "default" }: LiveNewsCardProps
   if (variant === "horizontal") {
     return (
       <article className="group flex items-start gap-4 rounded-xl border-b border-gray-100 px-2 py-3 transition-colors last:border-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50">
-        {/* Category-gradient thumbnail */}
+        {/* Category-gradient thumbnail or real image */}
         <a
           href={article.source_url}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Read ${article.title}`}
-          className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br ${gradient}`}
-        />
+          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl"
+        >
+          {article.image_url ? (
+            <div className="relative h-full w-full overflow-hidden rounded-xl">
+              <div
+                aria-hidden="true"
+                className={`absolute inset-0 bg-gradient-to-br ${gradient}`}
+              />
+              <img
+                src={article.image_url}
+                alt={article.title}
+                loading="lazy"
+                decoding="async"
+                className="relative h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </div>
+          ) : (
+            <div className={`h-full w-full rounded-xl bg-gradient-to-br ${gradient}`} />
+          )}
+        </a>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -76,6 +138,11 @@ export function LiveNewsCard({ article, variant = "default" }: LiveNewsCardProps
             <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400">
               {flag} {article.region}
             </span>
+            {article.credibility_score != null && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${badgeClass}`}>
+                {scoreLabel}
+              </span>
+            )}
           </div>
 
           <a
@@ -107,7 +174,8 @@ export function LiveNewsCard({ article, variant = "default" }: LiveNewsCardProps
     return (
       <article className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900 dark:hover:shadow-gray-900/50">
         {/* Thumbnail */}
-        <div className={`relative h-44 w-full overflow-hidden bg-gradient-to-br ${gradient}`}>
+        <div className="relative h-44 w-full overflow-hidden">
+          <CardThumbnail article={article} className="h-full w-full" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
           <div className="absolute left-2.5 top-2.5">
@@ -155,7 +223,8 @@ export function LiveNewsCard({ article, variant = "default" }: LiveNewsCardProps
   return (
     <article className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-200 hover:-translate-y-1 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900 dark:hover:shadow-gray-900/60">
       {/* Thumbnail */}
-      <div className={`relative h-56 w-full overflow-hidden bg-gradient-to-br ${gradient}`}>
+      <div className="relative h-56 w-full overflow-hidden">
+        <CardThumbnail article={article} className="h-full w-full" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
         <div className="absolute left-3 top-3">

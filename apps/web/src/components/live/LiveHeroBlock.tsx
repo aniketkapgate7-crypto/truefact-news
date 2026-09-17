@@ -3,7 +3,7 @@ import type { LiveArticle } from "@/types/news";
 import { LIVE_CATEGORY_COLORS } from "@/types/news";
 import {
   categoryGradient,
-  evidenceScoreLabel,
+  credibilityScoreLabel,
   regionFlag,
   sourceInitials,
   timeAgo,
@@ -16,28 +16,53 @@ interface LiveHeroBlockProps {
 export function LiveHeroBlock({ article }: LiveHeroBlockProps) {
   const gradient = categoryGradient(article.category);
   const initials = sourceInitials(article.source_name);
-  const scoreLabel = evidenceScoreLabel(article.evidence_score);
+  const scoreLabel = credibilityScoreLabel(article.credibility_score);
   const flag = regionFlag(article.region);
   const catColors = LIVE_CATEGORY_COLORS[article.category] ?? "bg-gray-600 text-white";
-  const isPending = !article.evidence_score || article.evidence_score <= 0;
+  const isPending =
+    article.credibility_score == null || article.credibility_score <= 0;
 
   return (
     <section
       aria-label="Hero story"
-      className={`relative w-full overflow-hidden rounded-none sm:rounded-2xl bg-gradient-to-br ${gradient} min-h-[420px] sm:min-h-[520px] lg:min-h-[580px] flex flex-col justify-end`}
+      className={`relative w-full overflow-hidden rounded-none sm:rounded-2xl min-h-[420px] sm:min-h-[520px] lg:min-h-[580px] flex flex-col justify-end`}
     >
+      {/* Background: real image with gradient fallback */}
+      <div className="absolute inset-0">
+        {/* Gradient always present — shows when image absent or loading */}
+        <div
+          aria-hidden="true"
+          className={`absolute inset-0 bg-gradient-to-br ${gradient}`}
+        />
+        {article.image_url && (
+          <img
+            src={article.image_url}
+            alt=""
+            aria-hidden="true"
+            loading="eager"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        )}
+      </div>
+
       {/* Ambient overlay for text legibility */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-      {/* Source initials visual accent — top right */}
-      <div
-        aria-hidden="true"
-        className="absolute top-0 right-0 w-64 h-64 opacity-10 flex items-center justify-center select-none pointer-events-none"
-      >
-        <span className="text-[9rem] font-black text-white leading-none">
-          {initials}
-        </span>
-      </div>
+      {/* Source initials visual accent — top right (only when no image) */}
+      {!article.image_url && (
+        <div
+          aria-hidden="true"
+          className="absolute top-0 right-0 w-64 h-64 opacity-10 flex items-center justify-center select-none pointer-events-none"
+        >
+          <span className="text-[9rem] font-black text-white leading-none">
+            {initials}
+          </span>
+        </div>
+      )}
 
       {/* Content */}
       <div className="relative z-10 p-6 sm:p-8 lg:p-10 space-y-4">
@@ -51,6 +76,11 @@ export function LiveHeroBlock({ article }: LiveHeroBlockProps) {
           <span className="rounded-full border border-white/20 bg-black/50 px-2.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
             {flag} {article.region}
           </span>
+          {article.credibility_score != null && article.credibility_score >= 80 && (
+            <span className="rounded-full bg-emerald-500/30 border border-emerald-400/60 px-2.5 py-0.5 text-[11px] font-bold text-emerald-200 backdrop-blur-sm">
+              🛡️ {article.credibility_score}% High Credibility
+            </span>
+          )}
           {article.category === "Breaking" && (
             <span className="flex items-center gap-1 rounded-full bg-red-600/30 border border-red-500/50 px-3 py-0.5 text-[11px] font-bold uppercase tracking-widest text-red-200">
               <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
@@ -90,12 +120,21 @@ export function LiveHeroBlock({ article }: LiveHeroBlockProps) {
           <span
             className={`px-2.5 py-1 rounded-full text-xs font-extrabold border ${
               isPending
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                ? "bg-gray-900/80 text-gray-300 border-gray-500/40"
+                : article.credibility_score != null && article.credibility_score >= 80
+                  ? "bg-emerald-500/30 text-emerald-200 border-emerald-400/60"
+                  : article.credibility_score != null && article.credibility_score >= 60
+                    ? "bg-amber-500/30 text-amber-200 border-amber-400/60"
+                    : "bg-rose-500/30 text-rose-200 border-rose-400/60"
             }`}
           >
             {scoreLabel}
           </span>
+          {article.confidence_level && (
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-gray-300 border border-white/10">
+              {article.confidence_level} confidence
+            </span>
+          )}
         </div>
 
         {/* CTA buttons */}

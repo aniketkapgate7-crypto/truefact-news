@@ -5,51 +5,56 @@
 
 /* ─── Design Tokens ───────────────────────────────────────────────── */
 @theme inline {
-  /* Brand */
-  --color-brand:          #DC2626;
-  --color-brand-hover:    #B91C1C;
-  --color-accent:         #1E40AF;
+  /* Public Editorial Theme (Light default) */
+  --color-page-bg:        #FFFFFF;
+  --color-page-subtle:    #F6F7F9;
+  --color-text-main:      #111827;
+  --color-text-muted:     #667085;
+  --color-border-editorial: #E5E7EB;
+  --color-truefact-red:   #E5242A;
+  --color-editorial-navy: #102A43;
+  --color-link-blue:      #2563EB;
 
-  /* Credibility */
-  --color-cred-high:      #16A34A;
-  --color-cred-med:       #CA8A04;
-  --color-cred-low:       #DC2626;
+  /* Credibility Palette */
+  --color-cred-teal:      #0D9488; /* 80–100 Teal */
+  --color-cred-blue:      #2563EB; /* 60–79 Blue */
+  --color-cred-amber:     #D97706; /* 40–59 Amber */
+  --color-cred-red:       #E5242A; /* 0–39 Red */
+  --color-cred-grey:      #667085; /* Missing / Pending */
 
   /* Typography */
-  --font-sans:   var(--font-inter),    ui-sans-serif,  system-ui, sans-serif;
-  --font-serif:  var(--font-playfair), ui-serif,       Georgia,   serif;
+  --font-sans:            var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif:           var(--font-playfair), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 
-  /* Easing */
-  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ─── Keyframes ───────────────────────────────────────────────────── */
-@keyframes ticker {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  /* Consistent Transition */
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ─── Base Styles ─────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
+  background-color: #FFFFFF;
+  color: #111827;
+}
+
+html[data-theme="dark"] {
+  background-color: #0B0F17;
+  color: #F3F4F6;
 }
 
 body {
   min-height: 100svh;
   font-family: var(--font-sans);
-  background-color: #f8f7f5;   /* warm cream — light default */
-  color: #1a1a1a;
+  background-color: #FFFFFF;
+  color: #111827;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
-[data-theme="dark"] body {
-  background-color: #0d1117;
-  color: #e6edf3;
+html[data-theme="dark"] body {
+  background-color: #0B0F17;
+  color: #F3F4F6;
 }
 
 /* ─── Reading Progress Bar ────────────────────────────────────────── */
@@ -59,67 +64,90 @@ body {
   left: 0;
   height: 3px;
   width: 0%;
-  background: linear-gradient(90deg, #DC2626 0%, #F97316 50%, #FBBF24 100%);
+  background: #E5242A;
   z-index: 9999;
-  transition: width 0.08s linear;
-  border-radius: 0 2px 2px 0;
+  transition: width 0.12s ease-out;
 }
 
-/* ─── Ticker Strip ────────────────────────────────────────────────── */
-.ticker-track {
-  display: flex;
-  white-space: nowrap;
-  animation: ticker 40s linear infinite;
-  width: max-content;
+/* ─── Subtle Entrance Animations (120-180ms) ───────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.ticker-track:hover {
-  animation-play-state: paused;
-}
-
-/* ─── Article Prose ───────────────────────────────────────────────── */
-.article-prose {
-  font-family: var(--font-serif);
-  font-size: 1.125rem;
-  line-height: 1.85;
-  color: #1a1a1a;
-  max-width: 65ch;
-}
-
-[data-theme="dark"] .article-prose {
-  color: #c9d1d9;
-}
-
-.article-prose h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-top: 2.5rem;
-  margin-bottom: 1rem;
-  color: #111;
-  font-family: var(--font-serif);
-  line-height: 1.3;
-}
-
-[data-theme="dark"] .article-prose h2 {
-  color: #e6edf3;
-}
-
-.article-prose p {
-  margin-bottom: 1.5rem;
-}
-
-.article-prose p:first-of-type::first-letter {
-  font-size: 3.5rem;
-  font-weight: 700;
-  float: left;
-  line-height: 0.85;
-  margin-right: 0.15rem;
-  margin-top: 0.2rem;
-  color: #DC2626;
-  font-family: var(--font-serif);
-}
-
-/* ─── Utility ─────────────────────────────────────────────────────── */
 .fade-in {
-  animation: fadeIn 0.4s var(--ease-smooth) both;
+  animation: fadeIn 150ms var(--ease-smooth) both;
+}
+
+/* ─── Respect Reduced Motion Preferences ──────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Editorial Article Prose ─────────────────────────────────────── */
+.editorial-prose {
+  font-family: var(--font-sans);
+  font-size: 1.0625rem; /* 17px */
+  line-height: 1.75;
+  color: #374151;
+}
+
+html[data-theme="dark"] .editorial-prose {
+  color: #D1D5DB;
+}
+
+.editorial-prose p {
+  margin-bottom: 1.4rem;
+}
+
+.editorial-prose h2 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-top: 2.25rem;
+  margin-bottom: 0.85rem;
+  color: #111827;
+}
+
+html[data-theme="dark"] .editorial-prose h2 {
+  color: #F9FAFB;
+}
+
+.editorial-prose blockquote {
+  border-left: 3px solid #E5242A;
+  padding-left: 1.25rem;
+  font-style: italic;
+  margin: 1.5rem 0;
+  color: #4B5563;
+}
+
+html[data-theme="dark"] .editorial-prose blockquote {
+  color: #9CA3AF;
+}
+
+/* Custom Clean Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 4px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #374151;
 }

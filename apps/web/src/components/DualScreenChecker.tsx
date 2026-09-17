@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { officialPortalDirectory } from "@/data/mockNews";
 
 interface DualScreenCheckerProps {
   initialText?: string;
@@ -15,7 +14,7 @@ export function DualScreenChecker({
   const [inputText, setInputText] = useState(initialText);
   const [isVerifying, setIsVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "factcheckers" | "official">("all");
-  const [verifications, setVerifications] = useState([
+  const [verifications] = useState([
     {
       source: "Snopes",
       status: "TRUE",

@@ -33,10 +33,19 @@ export interface LiveArticle {
   summary: string;
   source_name: string;
   source_url: string;
+  /** Hero image URL extracted from RSS; null/undefined when unavailable. */
+  image_url?: string | null;
   category: LiveCategory;
   region: LiveRegion;
   published_at: string;
   evidence_score: number;
+  /**
+   * Credibility score (0–100) from the assessment engine.
+   * Null/undefined when no assessment has been generated yet.
+   */
+  credibility_score?: number | null;
+  /** Assessment confidence level (low, medium, high) */
+  confidence_level?: "low" | "medium" | "high" | string | null;
 }
 
 /** Static region filter list — shared between RegionFilterBar and context. */
