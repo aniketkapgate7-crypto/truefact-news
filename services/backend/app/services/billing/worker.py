@@ -2,6 +2,9 @@ import argparse
 import logging
 import sys
 import uuid
+from collections.abc import Callable, Generator
+
+from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.services.billing.processor import BillingEventProcessor
@@ -15,18 +18,25 @@ def run_worker(
     max_batches: int = 1,
     worker_id: str | None = None,
     lease_seconds: int = 300,
+    session_factory: Callable[[], Generator[Session, None, None]] | None = None,
 ) -> int:
     """
     Bounded CLI worker execution loop for Phase 2B durable event processing.
     Executes up to `max_batches` of claimed events, then cleanly exits.
     Returns 0 on successful worker run, or 1 on unhandled system failure.
+
+    ``session_factory`` is an optional callable that yields a SQLAlchemy
+    Session.  When omitted the production ``get_db`` generator is used.
+    Tests pass their own factory so the worker operates on the isolated
+    in-memory database rather than the default on-disk one.
     """
     w_id = worker_id or f"worker_{uuid.uuid4().hex[:8]}"
     batches_run = 0
     total_processed = 0
 
     try:
-        db = next(get_db())
+        db_generator = session_factory() if session_factory is not None else get_db()
+        db = next(db_generator)
         provider = get_billing_provider()
         processor = BillingEventProcessor(
             db=db,

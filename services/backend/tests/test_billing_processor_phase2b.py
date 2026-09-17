@@ -490,11 +490,73 @@ def test_razorpay_adapter_performs_zero_network_calls(monkeypatch):
 
 # 11. Bounded CLI worker execution
 def test_bounded_cli_worker_execution(db: Session, mock_provider, monkeypatch):
+    """
+    Regression test: run_worker must operate on the isolated test database.
+
+    Previously, run_worker called next(get_db()) unconditionally, which
+    connected to the default on-disk DATABASE_URL. On a clean CI machine
+    that database has no tables, causing sqlite3.OperationalError.
+
+    The fix adds an optional ``session_factory`` parameter. This test
+    injects a factory that yields the already-created in-memory session,
+    proving the worker never touches the production database.
+    """
     monkeypatch.setattr(settings, "billing_enabled", True)
     monkeypatch.setattr(settings, "billing_provider", "test")
 
-    exit_code = run_worker(batch_size=10, max_batches=1, worker_id="test_worker")
+    # Guard: Prove that production get_db is never called when session_factory is provided.
+    def fail_if_production_get_db_called():
+        raise AssertionError(
+            "run_worker must not call production get_db when session_factory is provided"
+        )
+
+    monkeypatch.setattr(
+        "app.services.billing.worker.get_db", fail_if_production_get_db_called
+    )
+
+    # Seed an event in the test database to verify actual worker processing on the test DB
+    test_event = BillingWebhookEventModel(
+        provider="test",
+        provider_event_id="evt_worker_exec_test",
+        event_type="subscription.charged",
+        payload_sha256="hash_worker_test",
+        normalized_payload={"schema_version": 1, "event_type": "subscription.charged"},
+        processing_status="pending",
+    )
+    db.add(test_event)
+    db.commit()
+
+    # Track every session yielded by our factory to prove the worker
+    # used the injected session and not the production one.
+    sessions_yielded: list[Session] = []
+
+    def test_session_factory():
+        sessions_yielded.append(db)
+        yield db
+
+    exit_code = run_worker(
+        batch_size=10,
+        max_batches=1,
+        worker_id="test_worker",
+        session_factory=test_session_factory,
+    )
     assert exit_code == 0
+
+    # Regression assertion 1: exactly one session was yielded by our factory,
+    # confirming the worker used the isolated test database and not get_db().
+    assert sessions_yielded == [db], (
+        "run_worker must use the injected session_factory on every invocation; "
+        "it must never fall back to the production get_db() when a factory is provided."
+    )
+
+    # Regression assertion 2: verify the worker queried and processed the event in the test DB
+    db.refresh(test_event)
+    assert test_event.processing_status in ("processed", "dead_letter"), (
+        f"Event status in test database must be updated by worker, got {test_event.processing_status}"
+    )
+    assert test_event.processing_attempts == 1, (
+        "Worker must have recorded an execution attempt on the record in the injected test database"
+    )
 
 
 # 12. Migration round-trip on temporary SQLite database
