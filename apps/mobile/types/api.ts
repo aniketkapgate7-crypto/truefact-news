@@ -4,10 +4,12 @@ export type ApiNewsArticle = {
   summary: string;
   source_name: string;
   source_url: string;
+  image_url?: string | null;
   category: string;
   region: string;
   published_at: string;
   evidence_score: number;
+  credibility_score?: number | null;
   comment_count: number;
   repost_count: number;
 };

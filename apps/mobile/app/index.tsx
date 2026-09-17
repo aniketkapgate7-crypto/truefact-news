@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,93 +10,317 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { TopCommandBar } from "@/components/TopCommandBar";
+import { MetricCardsStrip } from "@/components/MetricCardsStrip";
+import {
+  IntelligenceFilterBar,
+  type MobileFeedMode,
+} from "@/components/IntelligenceFilterBar";
 import { NewsCard } from "@/components/NewsCard";
+import { SkeletonCard } from "@/components/SkeletonCard";
 import { useNewsFeed } from "@/hooks/useNewsFeed";
+import { COLORS } from "@/constants/theme";
+
+type BottomNavTab = "overview" | "feed" | "verify" | "saved";
 
 export default function HomeScreen() {
-  const { stories, isLoading, error, reload } = useNewsFeed();
-  const isInitialLoading = isLoading && stories.length === 0;
+  const {
+    stories,
+    isLoading,
+    isFetchingMore,
+    error,
+    hasMore,
+    selectedCategory,
+    setSelectedCategory,
+    setHighCredibilityOnly,
+    reload,
+    loadMore,
+  } = useNewsFeed();
+
+  const [activeTab, setActiveTab] = useState<BottomNavTab>("overview");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [feedMode, setFeedMode] = useState<MobileFeedMode>("all");
+
+  const handleSelectFeedMode = (mode: MobileFeedMode) => {
+    setFeedMode(mode);
+    if (mode === "high_credibility") {
+      setHighCredibilityOnly(true);
+    } else {
+      setHighCredibilityOnly(false);
+    }
+  };
+
+  // 1. Exclude test fixtures (id 1 "string")
+  const validStories = useMemo(() => {
+    return stories.filter(
+      (s) =>
+        s.id !== "1" &&
+        s.headline.toLowerCase().trim() !== "string" &&
+        !s.sourceUrl.includes("example.com")
+    );
+  }, [stories]);
+
+  // 2. Real Derived Metrics
+  const totalStoriesCount = validStories.length;
+  const highConfidenceCount = useMemo(() => {
+    return validStories.filter(
+      (s) => typeof s.credibilityScore === "number" && s.credibilityScore >= 80
+    ).length;
+  }, [validStories]);
+
+  const needsReviewCount = useMemo(() => {
+    return validStories.filter(
+      (s) =>
+        typeof s.credibilityScore === "number" &&
+        s.credibilityScore >= 40 &&
+        s.credibilityScore < 60
+    ).length;
+  }, [validStories]);
+
+  const activeSourcesCount = useMemo(() => {
+    const unique = new Set(validStories.map((s) => s.source).filter(Boolean));
+    return unique.size;
+  }, [validStories]);
+
+  // 3. Search & Feed Mode Filter
+  const filteredStories = useMemo(() => {
+    let list = validStories;
+
+    // Search query filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          s.headline.toLowerCase().includes(q) ||
+          s.summary.toLowerCase().includes(q) ||
+          s.source.toLowerCase().includes(q) ||
+          s.category.toLowerCase().includes(q)
+      );
+    }
+
+    // Secondary Feed Mode Filter
+    if (feedMode === "needs_review") {
+      list = list.filter(
+        (s) =>
+          typeof s.credibilityScore === "number" &&
+          s.credibilityScore >= 40 &&
+          s.credibilityScore < 60
+      );
+    } else if (feedMode === "pending") {
+      list = list.filter(
+        (s) => s.credibilityScore == null || s.credibilityScore <= 0
+      );
+    }
+
+    return list;
+  }, [validStories, searchQuery, feedMode]);
+
+  const isInitialLoading = isLoading && validStories.length === 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Top Command Bar with Brand, Live Indicator, & Search */}
+      <TopCommandBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onRefresh={() => void reload()}
+      />
+
       <FlatList
-        data={stories}
-        keyExtractor={(story) => story.id}
+        data={isInitialLoading ? [] : filteredStories}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => <NewsCard story={item} />}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.listContent}
+        onEndReached={() => void loadMore()}
+        onEndReachedThreshold={0.4}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading && stories.length > 0}
+            refreshing={isLoading && validStories.length > 0}
             onRefresh={() => void reload()}
-            colors={["#38BDF8"]}
-            tintColor="#38BDF8"
+            colors={[COLORS.accentCyan]}
+            tintColor={COLORS.accentCyan}
           />
         }
         ListHeaderComponent={
-          <>
-            <View style={styles.header}>
-              <View>
-                <Text style={styles.logo}>TRUEFACT</Text>
-                <Text style={styles.subtitle}>News you can verify</Text>
-              </View>
+          <View style={styles.headerContainer}>
+            {/* Horizontally Scrollable Real Derived Metrics */}
+            <MetricCardsStrip
+              totalStories={totalStoriesCount}
+              highConfidenceCount={highConfidenceCount}
+              needsReviewCount={needsReviewCount}
+              activeSourcesCount={activeSourcesCount}
+            />
 
-              <View style={styles.liveBadge}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>LIVE</Text>
-              </View>
-            </View>
+            {/* Filter Tabs & Category Pills */}
+            <IntelligenceFilterBar
+              feedMode={feedMode}
+              onSelectFeedMode={handleSelectFeedMode}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+            />
 
-            <View style={styles.hero}>
-              <Text style={styles.eyebrow}>REAL-TIME INTELLIGENCE</Text>
-              <Text style={styles.title}>Stories ranked by credibility</Text>
-
-              <Text style={styles.description}>
-                Follow breaking news, social engagement and credibility signals
-                from multiple platforms.
-              </Text>
-            </View>
-
+            {/* Section Count Header */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Latest stories</Text>
-              <Text style={styles.updateCount}>
-                {stories.length} updates
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionTitle}>
+                  {feedMode === "high_credibility"
+                    ? "High Confidence Stories"
+                    : selectedCategory === "All"
+                      ? "Stories"
+                      : `${selectedCategory} Stories`}
+                </Text>
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>
+                    {filteredStories.length}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.syncStatusText}>
+                {isLoading ? "Syncing..." : "Real-time"}
               </Text>
             </View>
-          </>
-        }
-        ListEmptyComponent={
-          <View style={styles.stateCard}>
-            {isInitialLoading ? (
-              <>
-                <ActivityIndicator color="#38BDF8" size="large" />
-                <Text style={styles.stateText}>Loading live news…</Text>
-              </>
-            ) : error ? (
-              <>
-                <Text style={styles.errorTitle}>Unable to load news</Text>
-                <Text style={styles.errorMessage}>{error}</Text>
 
-                <Pressable
-                  style={styles.retryButton}
-                  onPress={() => void reload()}
-                >
-                  <Text style={styles.retryText}>Try again</Text>
-                </Pressable>
-              </>
-            ) : (
-              <Text style={styles.stateText}>No stories are available.</Text>
+            {/* Skeleton Loaders */}
+            {isInitialLoading && (
+              <View style={styles.skeletonContainer}>
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </View>
             )}
           </View>
         }
+        ListEmptyComponent={
+          !isInitialLoading ? (
+            <View style={styles.emptyCard}>
+              {error ? (
+                <>
+                  <Text style={styles.emptyIcon}>⚠️</Text>
+                  <Text style={styles.emptyTitle}>Unable to Reach Feed</Text>
+                  <Text style={styles.emptyMessage}>{error}</Text>
+                  <Pressable
+                    style={styles.retryBtn}
+                    onPress={() => void reload()}
+                  >
+                    <Text style={styles.retryBtnText}>Retry Ingestion</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.emptyIcon}>📡</Text>
+                  <Text style={styles.emptyTitle}>No Stories Found</Text>
+                  <Text style={styles.emptyMessage}>
+                    No articles match your current filter settings. Try switching category or viewing all stories.
+                  </Text>
+                  <Pressable
+                    style={styles.resetBtn}
+                    onPress={() => {
+                      setSelectedCategory("All");
+                      handleSelectFeedMode("all");
+                      setSearchQuery("");
+                    }}
+                  >
+                    <Text style={styles.resetBtnText}>Reset Filters</Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          ) : null
+        }
         ListFooterComponent={
-          stories.length > 0 ? (
-            <Text style={styles.footer}>
-              AI-assisted analysis • Verify important information independently
-            </Text>
+          filteredStories.length > 0 ? (
+            <View style={styles.footer}>
+              {isFetchingMore ? (
+                <View style={styles.fetchMoreRow}>
+                  <ActivityIndicator color={COLORS.accentCyan} size="small" />
+                  <Text style={styles.fetchMoreText}>Loading more records…</Text>
+                </View>
+              ) : !hasMore ? (
+                <Text style={styles.footerText}>
+                  All caught up · TrueFact Intelligence
+                </Text>
+              ) : null}
+            </View>
           ) : null
         }
       />
+
+      {/* Bottom Navigation Bar */}
+      <View style={styles.bottomNav}>
+        <Pressable
+          style={styles.navItem}
+          onPress={() => setActiveTab("overview")}
+          hitSlop={6}
+        >
+          <Text style={[styles.navIcon, activeTab === "overview" && styles.navIconActive]}>
+            ⚡
+          </Text>
+          <Text
+            style={[
+              styles.navLabel,
+              activeTab === "overview" && styles.navLabelActive,
+            ]}
+          >
+            Overview
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.navItem}
+          onPress={() => setActiveTab("feed")}
+          hitSlop={6}
+        >
+          <Text style={[styles.navIcon, activeTab === "feed" && styles.navIconActive]}>
+            📡
+          </Text>
+          <Text
+            style={[
+              styles.navLabel,
+              activeTab === "feed" && styles.navLabelActive,
+            ]}
+          >
+            Live Feed
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.navItem}
+          onPress={() => setActiveTab("verify")}
+          hitSlop={6}
+        >
+          <Text style={[styles.navIcon, activeTab === "verify" && styles.navIconActive]}>
+            🛡️
+          </Text>
+          <Text
+            style={[
+              styles.navLabel,
+              activeTab === "verify" && styles.navLabelActive,
+            ]}
+          >
+            Verify
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.navItem}
+          onPress={() => setActiveTab("saved")}
+          hitSlop={6}
+        >
+          <Text style={[styles.navIcon, activeTab === "saved" && styles.navIconActive]}>
+            📑
+          </Text>
+          <Text
+            style={[
+              styles.navLabel,
+              activeTab === "saved" && styles.navLabelActive,
+            ]}
+          >
+            Saved
+          </Text>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -103,136 +328,160 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#07111F",
+    backgroundColor: COLORS.bgMain,
   },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 20,
+  listContent: {
+    paddingBottom: 24,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  logo: {
-    color: "#F8FAFC",
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  subtitle: {
-    color: "#7F91A8",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  liveBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#102238",
-    borderColor: "#1F3D5C",
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#20E3B2",
-    marginRight: 7,
-  },
-  liveText: {
-    color: "#D9FFF5",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  hero: {
-    marginTop: 40,
-  },
-  eyebrow: {
-    color: "#38BDF8",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1.4,
-  },
-  title: {
-    color: "#F8FAFC",
-    fontSize: 32,
-    fontWeight: "900",
-    lineHeight: 39,
-    marginTop: 12,
-  },
-  description: {
-    color: "#9AABC0",
-    fontSize: 15,
-    lineHeight: 23,
-    marginTop: 14,
+  headerContainer: {
+    paddingBottom: 6,
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 34,
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   sectionTitle: {
-    color: "#F8FAFC",
-    fontSize: 19,
-    fontWeight: "800",
-  },
-  updateCount: {
-    color: "#38BDF8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  stateCard: {
-    alignItems: "center",
-    backgroundColor: "#0E1D30",
-    borderColor: "#1D3855",
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 24,
-  },
-  stateText: {
-    color: "#9AABC0",
-    fontSize: 14,
-    marginTop: 14,
-    textAlign: "center",
-  },
-  errorTitle: {
-    color: "#FB7185",
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  errorMessage: {
-    color: "#9AABC0",
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 8,
-    textAlign: "center",
-  },
-  retryButton: {
-    backgroundColor: "#38BDF8",
-    borderRadius: 14,
-    marginTop: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-  },
-  retryText: {
-    color: "#07111F",
+    color: COLORS.textPrimary,
     fontSize: 13,
     fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  countBadge: {
+    backgroundColor: COLORS.bgRaised,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+  },
+  countBadgeText: {
+    color: COLORS.accentCyan,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  syncStatusText: {
+    color: COLORS.textDim,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  skeletonContainer: {
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  emptyCard: {
+    backgroundColor: COLORS.bgPanel,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 16,
+    marginTop: 20,
+    alignItems: "center",
+  },
+  emptyIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  emptyMessage: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  retryBtn: {
+    backgroundColor: COLORS.bgRaised,
+    borderWidth: 1,
+    borderColor: COLORS.accentCyan,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 14,
+  },
+  retryBtnText: {
+    color: COLORS.accentCyan,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  resetBtn: {
+    backgroundColor: COLORS.bgRaised,
+    borderWidth: 1,
+    borderColor: COLORS.borderSubtle,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 14,
+  },
+  resetBtnText: {
+    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: "800",
   },
   footer: {
-    color: "#52657C",
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  fetchMoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  fetchMoreText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  footerText: {
+    color: COLORS.textDim,
     fontSize: 11,
-    lineHeight: 17,
-    textAlign: "center",
-    paddingTop: 10,
+    fontWeight: "700",
+  },
+  bottomNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    backgroundColor: COLORS.bgHeader,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderSubtle,
+    paddingVertical: 8,
     paddingBottom: 12,
+  },
+  navItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 64,
+    minHeight: 44,
+  },
+  navIcon: {
+    fontSize: 16,
+    opacity: 0.6,
+  },
+  navIconActive: {
+    opacity: 1,
+  },
+  navLabel: {
+    color: COLORS.textDim,
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  navLabelActive: {
+    color: COLORS.accentCyan,
+    fontWeight: "900",
   },
 });

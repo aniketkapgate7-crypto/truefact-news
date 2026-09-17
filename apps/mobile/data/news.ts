@@ -7,6 +7,9 @@ export const NEWS_STORIES: NewsStory[] = [
     summary:
       "Researchers introduced a collaborative program focused on safer and more transparent artificial intelligence.",
     source: "Technology Daily",
+    sourceUrl: "https://example.com/ai-research",
+    category: "Tech",
+    region: "Global",
     publishedAt: "2026-07-25T10:30:00Z",
     credibilityScore: 92,
     credibilityLabel: "Highly credible",
@@ -20,6 +23,9 @@ export const NEWS_STORIES: NewsStory[] = [
     summary:
       "A large renewable-energy project has started its first public testing phase.",
     source: "World Report",
+    sourceUrl: "https://example.com/clean-energy",
+    category: "Science",
+    region: "Europe",
     publishedAt: "2026-07-25T08:15:00Z",
     credibilityScore: 81,
     credibilityLabel: "Credible",
@@ -33,6 +39,9 @@ export const NEWS_STORIES: NewsStory[] = [
     summary:
       "A viral post is gaining attention, but independent sources have not confirmed its main claim.",
     source: "Social Media",
+    sourceUrl: "https://example.com/unconfirmed-claim",
+    category: "Tech",
+    region: "North America",
     publishedAt: "2026-07-25T06:45:00Z",
     credibilityScore: 38,
     credibilityLabel: "Unverified",
