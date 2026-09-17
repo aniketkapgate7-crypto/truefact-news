@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
+import { useAppAuth } from "@/components/auth/AuthContext";
 import {
   saveStoryApi,
   removeSavedStoryApi,
@@ -16,20 +16,16 @@ interface ArticleActionsProps {
 }
 
 export function ArticleActions({ articleId, isPro = false }: ArticleActionsProps) {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken, isAuthEnabled } = useAppAuth();
   const [saved, setSaved] = useState(false);
   const [loadingSave, setLoadingSave] = useState(false);
   const [watched, setWatched] = useState(false);
   const [loadingWatch, setLoadingWatch] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const isClerkConfigured =
-    typeof process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.trim().length > 0;
-
   // Fetch initial saved status directly from the backend
   useEffect(() => {
-    if (!isSignedIn || !isClerkConfigured) return;
+    if (!isSignedIn || !isAuthEnabled) return;
     let isMounted = true;
 
     getToken()
@@ -49,9 +45,13 @@ export function ArticleActions({ articleId, isPro = false }: ArticleActionsProps
     return () => {
       isMounted = false;
     };
-  }, [isSignedIn, getToken, articleId, isClerkConfigured]);
+  }, [isSignedIn, getToken, articleId, isAuthEnabled]);
 
   const handleSaveToggle = async () => {
+    if (!isAuthEnabled) {
+      setMessage("Authentication is disabled in this environment.");
+      return;
+    }
     if (!isSignedIn || loadingSave) return;
     setLoadingSave(true);
     setMessage(null);
@@ -77,6 +77,10 @@ export function ArticleActions({ articleId, isPro = false }: ArticleActionsProps
   };
 
   const handleWatchSource = async () => {
+    if (!isAuthEnabled) {
+      setMessage("Authentication is disabled in this environment.");
+      return;
+    }
     if (!isSignedIn || !isPro || loadingWatch) return;
     setLoadingWatch(true);
     setMessage(null);
@@ -96,7 +100,7 @@ export function ArticleActions({ articleId, isPro = false }: ArticleActionsProps
     }
   };
 
-  if (!isClerkConfigured) {
+  if (!isAuthEnabled) {
     return (
       <div className="flex items-center gap-2">
         <span

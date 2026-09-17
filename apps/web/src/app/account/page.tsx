@@ -3,13 +3,10 @@ import Link from "next/link";
 import { EditorialHeader } from "@/components/editorial/EditorialHeader";
 import { EditorialFooter } from "@/components/editorial/EditorialFooter";
 import { getAuthenticatedUserProfile } from "@/lib/api";
+import { isAuthEnabled } from "@/lib/authConfig";
 
 export default async function AccountPage() {
-  const isClerkConfigured =
-    typeof process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.trim().length > 0;
-
-  if (!isClerkConfigured) {
+  if (!isAuthEnabled()) {
     return (
       <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-[#070A10]">
         <EditorialHeader />

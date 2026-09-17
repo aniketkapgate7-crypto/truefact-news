@@ -1,5 +1,11 @@
 import React from "react";
 import { ClerkProvider } from "@clerk/nextjs";
+import { DisabledAuthProvider } from "./DisabledAuthProvider";
+import { ClerkAuthProviderBridge } from "./ClerkAuthProviderBridge";
+import { isAuthEnabled } from "@/lib/authConfig";
+
+export { useAppAuth } from "./AuthContext";
+export type { AppAuthContextType } from "./AuthContext";
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -7,12 +13,12 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  const authEnabled = process.env.AUTH_ENABLED === "true";
+  const enabled = isAuthEnabled();
 
-  if (!authEnabled || !publishableKey || !publishableKey.trim()) {
+  if (!enabled || !publishableKey || !publishableKey.trim()) {
     // When authentication is disabled or Clerk publishable key is not configured,
-    // pass through children safely without throwing
-    return <>{children}</>;
+    // do not instantiate ClerkProvider and provide a safe disabled auth context
+    return <DisabledAuthProvider>{children}</DisabledAuthProvider>;
   }
 
   return (
@@ -26,7 +32,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         },
       }}
     >
-      {children}
+      <ClerkAuthProviderBridge>{children}</ClerkAuthProviderBridge>
     </ClerkProvider>
   );
 }

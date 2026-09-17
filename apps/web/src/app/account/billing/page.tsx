@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EditorialHeader } from "@/components/editorial/EditorialHeader";
 import { EditorialFooter } from "@/components/editorial/EditorialFooter";
 import { getBillingMe } from "@/lib/api";
+import { isAuthEnabled } from "@/lib/authConfig";
 
 export const metadata = {
   title: "Billing & Subscriptions — TrueFact News",
@@ -10,11 +11,7 @@ export const metadata = {
 };
 
 export default async function AccountBillingPage() {
-  const isClerkConfigured =
-    typeof process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.trim().length > 0;
-
-  if (!isClerkConfigured) {
+  if (!isAuthEnabled()) {
     return (
       <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-[#070A10]">
         <EditorialHeader />

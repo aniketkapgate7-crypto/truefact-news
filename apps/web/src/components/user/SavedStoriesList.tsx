@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
+import { useAppAuth } from "@/components/auth/AuthContext";
 import { SavedStoryResponse, getSavedStories, removeSavedStoryApi } from "@/lib/api";
 
 interface SavedStoriesListProps {
@@ -16,7 +16,7 @@ export function SavedStoriesList({
   initialError = null,
   token: initialToken = null,
 }: SavedStoriesListProps) {
-  const { getToken } = useAuth();
+  const { getToken } = useAppAuth();
   const [stories, setStories] = useState<SavedStoryResponse[]>(initialStories);
   const [error, setError] = useState<string | null>(initialError);
   const [isLoading, setIsLoading] = useState(false);

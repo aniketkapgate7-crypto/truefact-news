@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getNewsFeed, type ApiNewsArticle } from "@/lib/api";
 import { checkWorkspaceAccess } from "@/lib/workspaceAuth";
 import { EditorialWorkspaceClient } from "@/components/editorial/workspace/EditorialWorkspaceClient";
+import { isAuthEnabled } from "@/lib/authConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,15 @@ export default async function WorkspacePage() {
   let getToken: () => Promise<string | null> = async () => null;
   let authContext = null;
 
-  try {
-    const authResult = await auth();
-    userId = authResult.userId;
-    getToken = authResult.getToken;
-    authContext = { userId, getToken };
-  } catch {
-    // Clerk might throw if completely unconfigured
+  if (isAuthEnabled()) {
+    try {
+      const authResult = await auth();
+      userId = authResult.userId;
+      getToken = authResult.getToken;
+      authContext = { userId, getToken };
+    } catch {
+      // Clerk might throw if unconfigured
+    }
   }
 
   const access = await checkWorkspaceAccess(

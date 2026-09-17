@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
+import { useAppAuth } from "@/components/auth/AuthContext";
 import {
   type ApiNewsArticle,
   type ApiCredibilityAssessment,
@@ -91,7 +91,7 @@ export function EditorialWorkspaceClient({
   userProfile,
   initialToken,
 }: EditorialWorkspaceClientProps) {
-  const { getToken } = useAuth();
+  const { getToken } = useAppAuth();
 
   const [articles, setArticles] = useState<ApiNewsArticle[]>(initialArticles);
   const [selectedArticleId, setSelectedArticleId] = useState<number | null>(

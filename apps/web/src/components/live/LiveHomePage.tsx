@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@clerk/nextjs";
+import { useAppAuth } from "@/components/auth/AuthContext";
 import { IntelligenceSidebar, type NavSection } from "@/components/dashboard/IntelligenceSidebar";
 import { CommandBar } from "@/components/dashboard/CommandBar";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -18,7 +18,7 @@ interface LiveHomePageProps {
 
 export function LiveHomePage({ articles }: LiveHomePageProps) {
   const { selectedRegion, setSelectedRegion, setActiveArticle } = useNewsContext();
-  const { isSignedIn, getToken } = useAuth();
+  const { isSignedIn, getToken, isAuthEnabled } = useAppAuth();
 
   const [activeSection, setActiveSection] = useState<NavSection>("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,11 +62,7 @@ export function LiveHomePage({ articles }: LiveHomePageProps) {
   }, [isSignedIn, getToken]);
 
   const handleToggleSave = async (id: number) => {
-    const isClerkConfigured =
-      typeof process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY === "string" &&
-      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.trim().length > 0;
-
-    if (!isClerkConfigured) {
+    if (!isAuthEnabled) {
       setSaveNotification({
         type: "info",
         message: "Saved stories are unavailable: authentication is not configured in this environment.",
