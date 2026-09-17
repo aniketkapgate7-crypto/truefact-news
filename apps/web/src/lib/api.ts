@@ -186,10 +186,16 @@ async function getErrorMessage(response: Response): Promise<string> {
     if (
       typeof body === "object" &&
       body !== null &&
-      "detail" in body &&
-      typeof body.detail === "string"
+      "detail" in body
     ) {
-      return body.detail;
+      if (typeof body.detail === "string") {
+        return body.detail;
+      }
+      if (Array.isArray(body.detail)) {
+        return body.detail
+          .map((item) => (typeof item === "object" && item !== null && "msg" in item ? String(item.msg) : String(item)))
+          .join("; ");
+      }
     }
   } catch {
     // Use the fallback message below when the body is not JSON.
@@ -552,4 +558,45 @@ export async function removeSourceWatchlistApi(
     },
   );
   return response.ok;
+}
+
+export interface EditorialReviewUpdatePayload {
+  review_status?: ReviewStatus;
+  verdict?: FactCheckVerdict | null;
+  reviewer_id?: string | null;
+  reviewer_name?: string | null;
+  claim?: string | null;
+  claimant?: string | null;
+  claim_date?: string | null;
+  conclusion?: string | null;
+  correction_summary?: string | null;
+}
+
+export async function updateEditorialReviewApi(
+  token: string,
+  articleId: number,
+  updates: EditorialReviewUpdatePayload,
+): Promise<ApiCredibilityAssessment> {
+  if (!token || !token.trim()) {
+    throw new Error("Authentication credentials were not provided");
+  }
+
+  const response = await fetch(
+    `${getApiBaseUrl()}/api/v1/editorial/review/${articleId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token.trim()}`,
+      },
+      body: JSON.stringify(updates),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+
+  return (await response.json()) as ApiCredibilityAssessment;
 }

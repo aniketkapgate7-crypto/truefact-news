@@ -1,11 +1,28 @@
-import { getAuthenticatedUserProfile } from "@/lib/api";
+import { getAuthenticatedUserProfile, type ApiUser } from "@/lib/api";
+
+export type WorkspaceAccessResult =
+  | {
+      granted: false;
+      reason:
+        | "workspace_disabled"
+        | "clerk_not_configured"
+        | "auth_disabled"
+        | "unauthenticated"
+        | "missing_token"
+        | "insufficient_role"
+        | "backend_error";
+    }
+  | {
+      granted: true;
+      profile: ApiUser;
+    };
 
 export async function checkWorkspaceAccess(
   authEnabled: string | undefined,
   workspaceEnabled: string | undefined,
   clerkKey: string | undefined,
   authContext: { userId: string | null; getToken: () => Promise<string | null> } | null
-) {
+): Promise<WorkspaceAccessResult> {
   if (workspaceEnabled !== "true") {
     return { granted: false, reason: "workspace_disabled" };
   }
