@@ -156,6 +156,71 @@ class CredibilityAssessmentModel(Base):
         nullable=False,
     )
 
+    # Human-reviewed editorial review fields
+    review_status: Mapped[str] = mapped_column(
+        String(50),
+        default="automated",
+        server_default="automated",
+        nullable=False,
+    )
+
+    verdict: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    reviewer_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    reviewer_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    claim: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
+    claimant: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    claim_date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    conclusion: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    correction_summary: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    review_version: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        server_default="1",
+        nullable=False,
+    )
+
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    review_published_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

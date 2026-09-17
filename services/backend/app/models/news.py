@@ -60,6 +60,11 @@ class NewsArticleModel(Base):
         nullable=False,
     )
 
+    image_url: Mapped[str | None] = mapped_column(
+        String(2048),
+        nullable=True,
+    )
+
     category: Mapped[str] = mapped_column(
         String(100),
         nullable=False,

@@ -1,9 +1,9 @@
 from logging.config import fileConfig
 
+import app.models  # Registers all models
 from alembic import context
 from app.core.config import settings
 from app.db.database import Base, engine
-from app.models import NewsArticleModel  # Registers the model
 
 config = context.config
 
