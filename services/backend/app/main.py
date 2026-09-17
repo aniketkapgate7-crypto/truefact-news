@@ -7,10 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import settings
+from app.routers.billing import router as billing_router
 from app.routers.credibility import router as credibility_router
 from app.routers.fact_checks import router as fact_checks_router
 from app.routers.news import router as news_router
 from app.routers.social_posts import router as social_posts_router
+from app.routers.user_productivity import router as user_productivity_router
+from app.routers.users import router as users_router
+from app.routers.verify import router as verify_router
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +65,10 @@ app.include_router(news_router)
 app.include_router(social_posts_router)
 app.include_router(credibility_router)
 app.include_router(fact_checks_router)
+app.include_router(verify_router)
+app.include_router(users_router)
+app.include_router(user_productivity_router)
+app.include_router(billing_router)
 
 
 @app.get(
