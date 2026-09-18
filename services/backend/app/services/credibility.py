@@ -31,6 +31,26 @@ class AssessmentStatus(StrEnum):
     UNVERIFIED = "unverified"
 
 
+class ReviewStatus(StrEnum):
+    AUTOMATED = "automated"
+    PENDING_REVIEW = "pending_review"
+    IN_REVIEW = "in_review"
+    REVIEWED = "reviewed"
+    PUBLISHED = "published"
+    CORRECTED = "corrected"
+    RETRACTED = "retracted"
+
+
+class FactCheckVerdict(StrEnum):
+    TRUE = "true"
+    MOSTLY_TRUE = "mostly_true"
+    MIXED = "mixed"
+    MISLEADING = "misleading"
+    MOSTLY_FALSE = "mostly_false"
+    FALSE = "false"
+    UNVERIFIED = "unverified"
+
+
 class ConfidenceLevel(StrEnum):
     LOW = "low"
     MEDIUM = "medium"

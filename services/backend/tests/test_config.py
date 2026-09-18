@@ -90,3 +90,35 @@ def test_database_url_normalization(
     settings = Settings(database_url=database_url, _env_file=None)
 
     assert settings.database_url == expected_url
+
+
+@pytest.mark.parametrize(
+    "flag_name",
+    [
+        "enable_editorial_workspace",
+        "enable_editorial_mutations",
+        "enable_admin_mutations",
+    ],
+)
+def test_production_rejects_enabled_mutation_flags(flag_name: str) -> None:
+    with pytest.raises(
+        ValidationError, match="cannot be enabled in non-development runtime"
+    ):
+        _production_settings(**{flag_name: True})
+
+
+@pytest.mark.parametrize(
+    "env_name",
+    ["staging", "preview", "prod"],
+)
+def test_non_development_envs_reject_mutation_flags(env_name: str) -> None:
+    with pytest.raises(
+        ValidationError, match="cannot be enabled in non-development runtime"
+    ):
+        Settings(
+            app_env=env_name,
+            enable_admin_mutations=True,
+            cors_origins="https://app.example.com",
+            allowed_hosts="api.example.com",
+            _env_file=None,
+        )

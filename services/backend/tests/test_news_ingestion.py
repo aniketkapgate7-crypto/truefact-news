@@ -28,10 +28,14 @@ from app.services.news_ingestion import (
     NewsFeedResponseError,
     NewsFeedSource,
     NewsIngestionResult,
+    _extract_image_from_html,
+    _extract_image_url,
     _host_is_allowed,
     _normalized_http_url,
     _plain_text,
     _published_at,
+    _resolve_url,
+    _safe_image_url,
     _truncate,
 )
 
@@ -1193,3 +1197,257 @@ class TestCLIBehaviour:
 
         captured = capsys.readouterr()
         assert "Ingestion complete" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# Unit tests — image extraction helpers
+# ---------------------------------------------------------------------------
+
+
+class TestSafeImageUrl:
+    def test_accepts_https_url(self) -> None:
+        assert _safe_image_url("https://nasa.gov/image.jpg") is not None
+
+    def test_accepts_http_url(self) -> None:
+        assert _safe_image_url("http://nasa.gov/image.jpg") is not None
+
+    def test_rejects_data_uri(self) -> None:
+        assert _safe_image_url("data:image/png;base64,abc") is None
+
+    def test_rejects_javascript_uri(self) -> None:
+        assert _safe_image_url("javascript:alert(1)") is None
+
+    def test_rejects_empty_string(self) -> None:
+        assert _safe_image_url("") is None
+
+    def test_rejects_none(self) -> None:
+        assert _safe_image_url(None) is None
+
+    def test_rejects_url_with_credentials(self) -> None:
+        assert _safe_image_url("https://user:pass@nasa.gov/image.jpg") is None
+
+    def test_normalises_host_to_lowercase(self) -> None:
+        result = _safe_image_url("HTTPS://NASA.GOV/image.jpg")
+        assert result is not None
+        assert result.startswith("https://nasa.gov/")
+
+    def test_rejects_url_over_2048_chars(self) -> None:
+        long_url = "https://nasa.gov/" + "x" * 2048
+        assert _safe_image_url(long_url) is None
+
+
+class TestResolveUrl:
+    BASE = "https://www.nasa.gov/article/"
+
+    def test_resolves_relative_path(self) -> None:
+        result = _resolve_url("../images/photo.jpg", self.BASE)
+        assert result == "https://www.nasa.gov/images/photo.jpg"
+
+    def test_keeps_absolute_url_intact(self) -> None:
+        result = _resolve_url("https://cdn.nasa.gov/photo.jpg", self.BASE)
+        assert result == "https://cdn.nasa.gov/photo.jpg"
+
+    def test_rejects_data_uri_after_resolve(self) -> None:
+        assert _resolve_url("data:image/png;base64,abc", self.BASE) is None
+
+    def test_returns_none_for_empty(self) -> None:
+        assert _resolve_url("", self.BASE) is None
+
+
+class TestExtractImageFromHtml:
+    BASE = "https://www.nasa.gov/article/"
+
+    def test_finds_img_src(self) -> None:
+        html = '<p>Some text</p><img src="photo.jpg" alt="test">'
+        result = _extract_image_from_html(html, self.BASE)
+        assert result == "https://www.nasa.gov/article/photo.jpg"
+
+    def test_finds_absolute_img_src(self) -> None:
+        html = '<img src="https://cdn.nasa.gov/photo.jpg">'
+        result = _extract_image_from_html(html, self.BASE)
+        assert result == "https://cdn.nasa.gov/photo.jpg"
+
+    def test_returns_none_when_no_img(self) -> None:
+        html = "<p>No images here</p>"
+        result = _extract_image_from_html(html, self.BASE)
+        assert result is None
+
+    def test_skips_data_uri_src(self) -> None:
+        html = '<img src="data:image/png;base64,abc">'
+        result = _extract_image_from_html(html, self.BASE)
+        assert result is None
+
+
+class TestExtractImageUrl:
+    SOURCE = NewsFeedSource(
+        name="NASA",
+        feed_url="https://www.nasa.gov/news-release/feed/",
+        category="Science",
+        region="Global",
+        allowed_article_hosts=("nasa.gov",),
+    )
+    ARTICLE_URL = "https://www.nasa.gov/article/test"
+
+    def test_extracts_media_content_url(self) -> None:
+        entry = {
+            "media_content": [{"url": "https://www.nasa.gov/image.jpg"}],
+        }
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        assert result == "https://www.nasa.gov/image.jpg"
+
+    def test_extracts_media_thumbnail_url(self) -> None:
+        entry = {
+            "media_thumbnail": [{"url": "https://www.nasa.gov/thumb.jpg"}],
+        }
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        assert result == "https://www.nasa.gov/thumb.jpg"
+
+    def test_extracts_image_enclosure(self) -> None:
+        entry = {
+            "enclosures": [
+                {"type": "image/jpeg", "href": "https://www.nasa.gov/enc.jpg"}
+            ],
+        }
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        assert result == "https://www.nasa.gov/enc.jpg"
+
+    def test_skips_non_image_enclosure(self) -> None:
+        entry = {
+            "enclosures": [
+                {"type": "audio/mpeg", "href": "https://www.nasa.gov/audio.mp3"}
+            ],
+        }
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        assert result is None
+
+    def test_extracts_img_from_summary_html(self) -> None:
+        entry = {
+            "summary": '<p>Details.</p><img src="https://www.nasa.gov/news.jpg">',
+        }
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        assert result == "https://www.nasa.gov/news.jpg"
+
+    def test_returns_none_when_no_image(self) -> None:
+        entry = {"summary": "Plain text summary with no images."}
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        assert result is None
+
+    def test_media_content_has_priority_over_enclosures(self) -> None:
+        entry = {
+            "media_content": [{"url": "https://www.nasa.gov/high_priority.jpg"}],
+            "enclosures": [
+                {"type": "image/jpeg", "href": "https://www.nasa.gov/low_priority.jpg"}
+            ],
+        }
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        assert result == "https://www.nasa.gov/high_priority.jpg"
+
+    def test_skips_unsafe_media_content_url(self) -> None:
+        entry = {
+            "media_content": [{"url": "javascript:alert(1)"}],
+            "summary": '<img src="https://www.nasa.gov/fallback.jpg">',
+        }
+        result = _extract_image_url(
+            entry, self.ARTICLE_URL, self.SOURCE.allowed_article_hosts
+        )
+        # Should fall through to the HTML img extraction
+        assert result == "https://www.nasa.gov/fallback.jpg"
+
+
+class TestImageEnrichment:
+    """Test that existing articles with null image_url get enriched."""
+
+    def _make_service(self, content: bytes) -> LiveNewsIngestionService:
+        client = _mock_http_success(content)
+        return LiveNewsIngestionService(
+            sources=[NASA_FEED_SOURCE],
+            http_client=client,
+        )
+
+    def _make_rss_with_image(self) -> bytes:
+        return _make_rss(
+            [
+                {
+                    "title": "NASA Discovers New Planet Around Distant Star System",
+                    "link": "https://www.nasa.gov/planet-discovery",
+                    "summary": (
+                        "Astronomers have discovered a new planet. "
+                        '<img src="https://www.nasa.gov/planet.jpg">'
+                    ),
+                    "pubDate": _NASA_PUB_DATE,
+                }
+            ]
+        )
+
+    def test_enriches_existing_article_with_missing_image(self, db: Session) -> None:
+        # Create an article without an image.
+        existing = NewsArticleModel(
+            title="NASA Discovers New Planet Around Distant Star System",
+            summary="Astronomers have discovered a new planet.",
+            source_name="NASA",
+            source_url="https://www.nasa.gov/planet-discovery",
+            image_url=None,
+            category="Science",
+            region="Global",
+            published_at=datetime(2026, 8, 18, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        db.add(existing)
+        db.commit()
+
+        service = self._make_service(self._make_rss_with_image())
+        result = asyncio.run(service.ingest_source(NASA_FEED_SOURCE, db))
+
+        db.refresh(existing)
+
+        # Should be enriched, not created again.
+        assert result.created_count == 0
+        assert result.enriched_count == 1
+        assert existing.image_url == "https://www.nasa.gov/planet.jpg"
+
+    def test_does_not_overwrite_existing_image(self, db: Session) -> None:
+        # Create an article that already has an image.
+        existing = NewsArticleModel(
+            title="NASA Discovers New Planet Around Distant Star System",
+            summary="Astronomers have discovered a new planet.",
+            source_name="NASA",
+            source_url="https://www.nasa.gov/planet-discovery",
+            image_url="https://www.nasa.gov/original.jpg",
+            category="Science",
+            region="Global",
+            published_at=datetime(2026, 8, 18, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        db.add(existing)
+        db.commit()
+
+        service = self._make_service(self._make_rss_with_image())
+        result = asyncio.run(service.ingest_source(NASA_FEED_SOURCE, db))
+
+        db.refresh(existing)
+
+        assert result.enriched_count == 0
+        assert existing.image_url == "https://www.nasa.gov/original.jpg"
+
+    def test_new_article_stores_extracted_image(self, db: Session) -> None:
+        service = self._make_service(self._make_rss_with_image())
+        result = asyncio.run(service.ingest_source(NASA_FEED_SOURCE, db))
+
+        assert result.created_count == 1
+        from sqlalchemy import select
+
+        article = db.scalar(select(NewsArticleModel))
+        assert article is not None
+        assert article.image_url == "https://www.nasa.gov/planet.jpg"

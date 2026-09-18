@@ -1,7 +1,10 @@
 from uuid import uuid4
 
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.usefixtures("admin_mutations_enabled")
 
 ASSESSMENT_PAYLOAD = {
     "source_reliability_score": 80,

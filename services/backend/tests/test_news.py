@@ -1,4 +1,7 @@
+import pytest
 from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.usefixtures("admin_mutations_enabled")
 
 sample_article = {
     "title": "TrueFact automated testing completed",
@@ -344,3 +347,173 @@ def test_request_validation(client: TestClient) -> None:
     )
 
     assert empty_update_response.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# image_url serialization
+# ---------------------------------------------------------------------------
+
+
+def test_image_url_is_null_by_default(client: TestClient) -> None:
+    """Articles without an image_url serialize to null."""
+    create_response = client.post(
+        "/api/v1/news/",
+        json=make_article("image-null-test", "Image URL is null by default"),
+    )
+    assert create_response.status_code == 201
+    data = create_response.json()
+    assert "image_url" in data
+    assert data["image_url"] is None
+
+
+def test_image_url_can_be_set_on_create(client: TestClient) -> None:
+    """Articles created with an image_url round-trip correctly."""
+    payload = make_article(
+        "image-create-test",
+        "Article with hero image on creation",
+        image_url="https://example.com/hero.jpg",
+    )
+    create_response = client.post("/api/v1/news/", json=payload)
+    assert create_response.status_code == 201
+    data = create_response.json()
+    assert data["image_url"] == "https://example.com/hero.jpg"
+
+
+def test_image_url_can_be_patched(client: TestClient) -> None:
+    """PATCH sets and clears image_url correctly."""
+    create_response = client.post(
+        "/api/v1/news/",
+        json=make_article("image-patch-test", "Article without initial image"),
+    )
+    article_id = create_response.json()["id"]
+
+    # Set image_url via PATCH
+    set_response = client.patch(
+        f"/api/v1/news/{article_id}",
+        json={"image_url": "https://example.com/patched.jpg"},
+    )
+    assert set_response.status_code == 200
+    assert set_response.json()["image_url"] == "https://example.com/patched.jpg"
+
+    # Clear image_url to null via PATCH
+    clear_response = client.patch(
+        f"/api/v1/news/{article_id}",
+        json={"image_url": None},
+    )
+    assert clear_response.status_code == 200
+    assert clear_response.json()["image_url"] is None
+
+
+def test_credibility_score_is_null_before_assessment(client: TestClient) -> None:
+    """Articles without a credibility assessment have credibility_score: null."""
+    create_response = client.post(
+        "/api/v1/news/",
+        json=make_article(
+            "cred-null-test", "Article without any credibility assessment"
+        ),
+    )
+    assert create_response.status_code == 201
+    article_id = create_response.json()["id"]
+
+    get_response = client.get(f"/api/v1/news/{article_id}")
+    assert get_response.status_code == 200
+    data = get_response.json()
+    assert "credibility_score" in data
+    assert data["credibility_score"] is None
+
+
+def test_min_credibility_score_filtering_and_pending_exclusion(
+    client: TestClient,
+) -> None:
+    """min_credibility_score=80 filters at 80 vs 79 and excludes unassessed articles."""
+    # 1. High credibility article (score 80)
+    res80 = client.post(
+        "/api/v1/news/",
+        json=make_article("story-score-80", "High Credibility Article At 80 Threshold"),
+    )
+    id80 = res80.json()["id"]
+    post_res80 = client.post(
+        f"/api/v1/news/{id80}/credibility-assessment",
+        json={
+            "source_reliability_score": 80,
+            "evidence_quality_score": 80,
+            "corroboration_score": 80,
+            "content_quality_score": 80,
+            "explanation": "High credibility assessment with verified sources.",
+        },
+    )
+    assert post_res80.status_code == 201
+
+    # 2. Medium credibility article (score 79)
+    res79 = client.post(
+        "/api/v1/news/",
+        json=make_article("story-score-79", "Article Just Below Threshold At 79"),
+    )
+    id79 = res79.json()["id"]
+    post_res79 = client.post(
+        f"/api/v1/news/{id79}/credibility-assessment",
+        json={
+            "source_reliability_score": 79,
+            "evidence_quality_score": 79,
+            "corroboration_score": 79,
+            "content_quality_score": 79,
+            "explanation": "Article credibility score is slightly below threshold.",
+        },
+    )
+    assert post_res79.status_code == 201
+
+    # 3. Unassessed article (pending)
+    res_pending = client.post(
+        "/api/v1/news/",
+        json=make_article("story-pending", "Unassessed Article In Normal Feed"),
+    )
+    id_pending = res_pending.json()["id"]
+
+    # Normal feed returns all 3 articles
+    normal_feed = client.get("/api/v1/news/").json()
+    normal_ids = [item["id"] for item in normal_feed["items"]]
+    assert id80 in normal_ids
+    assert id79 in normal_ids
+    assert id_pending in normal_ids
+
+    # High credibility filtered feed (>= 80)
+    high_feed = client.get("/api/v1/news/?min_credibility_score=80").json()
+    assert high_feed["pagination"]["total_items"] == 1
+    assert len(high_feed["items"]) == 1
+    assert high_feed["items"][0]["id"] == id80
+    assert high_feed["items"][0]["credibility_score"] == 80
+
+
+def test_sort_by_credibility_score_highest_first(client: TestClient) -> None:
+    """sort_by=credibility_score orders from highest score to lowest."""
+    # Create 3 assessed articles with scores 85, 95, 81
+    scores = [85, 95, 81]
+    created_ids = {}
+    for score in scores:
+        res = client.post(
+            "/api/v1/news/",
+            json=make_article(f"story-{score}", f"Article with Score {score}"),
+        )
+        art_id = res.json()["id"]
+        created_ids[score] = art_id
+        client.post(
+            f"/api/v1/news/{art_id}/credibility-assessment",
+            json={
+                "source_reliability_score": score,
+                "evidence_quality_score": score,
+                "corroboration_score": score,
+                "content_quality_score": score,
+                "explanation": f"Assessment for article with score {score}.",
+            },
+        )
+
+    response = client.get(
+        "/api/v1/news/?min_credibility_score=80&sort_by=credibility_score&sort_order=desc"
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["pagination"]["total_items"] == 3
+    returned_scores = [item["credibility_score"] for item in data["items"]]
+    assert returned_scores == [95, 85, 81]
+    assert data["items"][0]["id"] == created_ids[95]

@@ -146,3 +146,7 @@ venv/
 *.sqlite
 *.sqlite3
 .ruff_cache/
+
+# Local binaries and presentation assets
+cloudflared.exe
+TRUEFACT NEWS.pptx
