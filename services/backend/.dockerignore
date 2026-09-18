@@ -1,0 +1,48 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python bytecode and compilation artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing, linting, and coverage artifacts
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+pytest_output.txt
+test1_out.txt
+
+# Tests (excluded from production runtime container)
+tests/
+
+# Local databases and runtime state
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files and credentials
+.env
+.env.*
+!.env.example
+
+# Git and version control
+.git/
+.gitignore
+
+# IDE and editor metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS artifacts
+.DS_Store
+Thumbs.db

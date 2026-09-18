@@ -89,6 +89,11 @@ def read_root() -> dict[str, str]:
     tags=["System"],
     summary="Check API health",
 )
+@app.get(
+    "/healthz",
+    tags=["System"],
+    summary="Check API health (probe endpoint)",
+)
 def health_check() -> dict[str, str]:
     return {
         "status": "healthy",
